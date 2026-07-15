@@ -1,6 +1,6 @@
-# laravel-facebook
+# WeTalk
 
-以 Laravel、Vite 與 Vue 建立的 Facebook-like 專案。
+以 Laravel、Vite 與 Vue 建立的社群交流專案。
 
 專案採用 Combination & Cache 分層設計，開發規範請參閱 [專案架構準則](docs/architecture.md)。
 

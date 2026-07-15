@@ -74,8 +74,8 @@ async function submit() {
         <nav class="navbar navbar-expand border-bottom bg-white py-3">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" :href="app.routes.dashboard">
-                    <span class="brand-mark">f</span>
-                    Laravel Facebook
+                    <span class="brand-mark">W</span>
+                    {{ app.project.name }}
                 </a>
 
                 <div class="d-flex align-items-center gap-2">
@@ -109,11 +109,11 @@ async function submit() {
                 <div class="row align-items-center justify-content-center g-5">
                     <div class="col-lg-5 d-none d-lg-block">
                         <span class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis mb-3">
-                            Laravel 13 · Vue 3 · Bootstrap 5
+                            {{ app.project.technology_label }}
                         </span>
                         <h1 class="display-5 fw-bold lh-sm mb-3">連結彼此，<br>分享每個精彩時刻。</h1>
                         <p class="lead text-secondary mb-0">
-                            建立帳號、登入會員中心，開始你的 Laravel Facebook 體驗。
+                            建立帳號、登入會員中心，開始你的 {{ app.project.name }} 體驗。
                         </p>
                     </div>
 
@@ -138,6 +138,7 @@ async function submit() {
                                             class="form-control form-control-lg"
                                             :class="{ 'is-invalid': fieldError('name') }"
                                             name="name"
+                                            :maxlength="app.constraints.name_max_length"
                                             autocomplete="name"
                                             required
                                         >
@@ -153,6 +154,7 @@ async function submit() {
                                             :class="{ 'is-invalid': fieldError('email') }"
                                             name="email"
                                             type="email"
+                                            :maxlength="app.constraints.email_max_length"
                                             autocomplete="email"
                                             required
                                         >
@@ -173,7 +175,7 @@ async function submit() {
                                         >
                                         <div class="invalid-feedback">{{ fieldError('password') }}</div>
                                         <div v-if="isRegister && !fieldError('password')" class="form-text">
-                                            密碼至少需要 8 個字元。
+                                            密碼至少需要 {{ app.constraints.password_min_length }} 個字元。
                                         </div>
                                     </div>
 

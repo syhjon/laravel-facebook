@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 // use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Constants\AuthenticationConstant;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -14,6 +15,6 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(route(AuthenticationConstant::ROUTE_LOGIN));
     }
 }

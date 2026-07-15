@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Constants\AuthenticationConstant;
+use App\Constants\ProjectConstant;
 use App\ExceptionCodes\AuthenticationExceptionCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,24 +16,27 @@ class AuthenticationTest extends TestCase
 
     public function test_guests_can_view_the_login_and_registration_pages(): void
     {
-        $this->get(route('login'))
+        $this->get(route(AuthenticationConstant::ROUTE_LOGIN))
             ->assertOk()
-            ->assertSee('id="app"', false);
+            ->assertSee('id="app"', false)
+            ->assertSee('<title>'.ProjectConstant::NAME.'</title>', false)
+            ->assertSee('--brand-primary: '.ProjectConstant::PRIMARY_COLOR.';', false)
+            ->assertSee(ProjectConstant::NAME);
 
-        $this->get(route('register'))
+        $this->get(route(AuthenticationConstant::ROUTE_REGISTER))
             ->assertOk()
             ->assertSee('id="app"', false);
     }
 
     public function test_guest_is_redirected_from_the_dashboard(): void
     {
-        $this->get(route('dashboard'))
-            ->assertRedirect(route('login'));
+        $this->get(route(AuthenticationConstant::ROUTE_DASHBOARD))
+            ->assertRedirect(route(AuthenticationConstant::ROUTE_LOGIN));
     }
 
     public function test_user_can_register(): void
     {
-        $response = $this->postJson(route('register'), [
+        $response = $this->postJson(route(AuthenticationConstant::ROUTE_REGISTER), [
             'name' => '王小明',
             'email' => 'USER@EXAMPLE.COM',
             'password' => 'password123',
@@ -40,7 +45,7 @@ class AuthenticationTest extends TestCase
 
         $response
             ->assertCreated()
-            ->assertJsonPath('redirect', route('dashboard'));
+            ->assertJsonPath('redirect', route(AuthenticationConstant::ROUTE_DASHBOARD));
 
         $user = User::where('email', 'user@example.com')->firstOrFail();
 
@@ -52,7 +57,7 @@ class AuthenticationTest extends TestCase
     {
         User::factory()->create(['email' => 'used@example.com']);
 
-        $this->postJson(route('register'), [
+        $this->postJson(route(AuthenticationConstant::ROUTE_REGISTER), [
             'name' => '',
             'email' => 'used@example.com',
             'password' => 'short',
@@ -73,17 +78,17 @@ class AuthenticationTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $this->postJson(route('login'), [
+        $this->postJson(route(AuthenticationConstant::ROUTE_LOGIN), [
             'email' => 'MEMBER@example.com',
             'password' => 'password123',
             'remember' => true,
         ])
             ->assertOk()
-            ->assertJsonPath('redirect', route('dashboard'));
+            ->assertJsonPath('redirect', route(AuthenticationConstant::ROUTE_DASHBOARD));
 
         $this->assertAuthenticatedAs($user);
 
-        $this->get(route('dashboard'))
+        $this->get(route(AuthenticationConstant::ROUTE_DASHBOARD))
             ->assertOk()
             ->assertSee($user->name)
             ->assertSee($user->email);
@@ -96,7 +101,7 @@ class AuthenticationTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response = $this->postJson(route('login'), [
+        $response = $this->postJson(route(AuthenticationConstant::ROUTE_LOGIN), [
             'email' => 'member@example.com',
             'password' => 'wrong-password',
         ]);
@@ -117,8 +122,8 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post(route('logout'))
-            ->assertRedirect(route('login'));
+            ->post(route(AuthenticationConstant::ROUTE_LOGOUT))
+            ->assertRedirect(route(AuthenticationConstant::ROUTE_LOGIN));
 
         $this->assertGuest();
     }

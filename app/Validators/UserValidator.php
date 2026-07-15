@@ -2,6 +2,7 @@
 
 namespace App\Validators;
 
+use App\Constants\AuthenticationConstant;
 use App\ExceptionCodes\AuthenticationExceptionCode;
 use App\Exceptions\DomainValidationException;
 use Illuminate\Support\Facades\Validator;
@@ -16,9 +17,9 @@ class UserValidator
     public function validateRegistration(array $input): array
     {
         $validator = Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'name' => ['required', 'string', 'max:'.AuthenticationConstant::NAME_MAX_LENGTH],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:'.AuthenticationConstant::EMAIL_MAX_LENGTH, 'unique:users,email'],
+            'password' => ['required', 'confirmed', Password::min(AuthenticationConstant::PASSWORD_MIN_LENGTH)],
         ]);
 
         if ($validator->fails()) {

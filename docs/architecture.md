@@ -74,6 +74,14 @@ AuthController
 8. Container 可組合 Checker、ServiceManager 與 CombinationManager，但不得跳層直接存取 Service、Repository、Validator 或 Model。
 9. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
 
+## 常數與環境設定規範
+
+- 產品名稱、品牌色、route/page 識別、驗證限制、cache key／TTL／payload version 等會隨產品版本調整的參數，統一定義於 `app/Constants`。
+- PHP 參數由對應 Constant 直接引用；Vue 與 CSS 所需參數由 Combination 傳入 `appData`，不得在前端重複寫死。
+- 資料庫連線、外部服務憑證、主機 URL 等會隨部署環境變動或涉及機密的設定，維持於 `.env` 與 `config`，不得放入 Constants。
+- 可翻譯的使用者文案應放入語系檔；Constants 不負責取代 Laravel localization。
+- `ProjectConstant` 管理專案名稱與品牌視覺參數，`AuthenticationConstant` 管理登入／註冊流程參數，`UserConstant` 管理會員與快取參數。
+
 ## Container 選擇規範
 
 - Controller 建構子只注入 `app/Contracts/Containers` 下的介面。

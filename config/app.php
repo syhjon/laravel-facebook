@@ -1,5 +1,7 @@
 <?php
 
+use App\Constants\ProjectConstant;
+
 return [
 
     /*
@@ -13,7 +15,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => ProjectConstant::NAME,
 
     /*
     |--------------------------------------------------------------------------

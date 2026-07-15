@@ -9,20 +9,9 @@ use Illuminate\Support\Facades\Cache;
 
 class UserCacheManager
 {
-    private const CACHE_PAYLOAD_VERSION = 1;
-
-    private const CACHEABLE_ATTRIBUTES = [
-        'id',
-        'name',
-        'email',
-        'email_verified_at',
-        'created_at',
-        'updated_at',
-    ];
-
     public function key(int $userId): string
     {
-        return "[UserById][user_id:{$userId}]";
+        return sprintf(UserConstant::CACHE_KEY_PATTERN, $userId);
     }
 
     /**
@@ -66,8 +55,8 @@ class UserCacheManager
         Cache::put(
             $key,
             [
-                'version' => self::CACHE_PAYLOAD_VERSION,
-                'attributes' => $user->only(self::CACHEABLE_ATTRIBUTES),
+                'version' => UserConstant::CACHE_PAYLOAD_VERSION,
+                'attributes' => $user->only(UserConstant::CACHEABLE_ATTRIBUTES),
             ],
             UserConstant::CACHE_TTL_SECONDS,
         );
@@ -76,7 +65,7 @@ class UserCacheManager
     private function isValidPayload(mixed $cached): bool
     {
         return is_array($cached)
-            && ($cached['version'] ?? null) === self::CACHE_PAYLOAD_VERSION
+            && ($cached['version'] ?? null) === UserConstant::CACHE_PAYLOAD_VERSION
             && isset($cached['attributes'])
             && is_array($cached['attributes']);
     }

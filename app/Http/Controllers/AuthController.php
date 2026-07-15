@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Constants\AuthenticationConstant;
 use App\Contracts\Containers\AuthenticationContainerInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -17,17 +18,17 @@ class AuthController extends Controller
 
     public function showLogin(): View
     {
-        return $this->render('login');
+        return $this->render(AuthenticationConstant::PAGE_LOGIN);
     }
 
     public function showRegister(): View
     {
-        return $this->render('register');
+        return $this->render(AuthenticationConstant::PAGE_REGISTER);
     }
 
     public function dashboard(Request $request): View
     {
-        return $this->render('dashboard', $request->user()->getKey());
+        return $this->render(AuthenticationConstant::PAGE_DASHBOARD, $request->user()->getKey());
     }
 
     public function register(Request $request): JsonResponse
@@ -40,7 +41,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => '註冊成功',
-            'redirect' => route('dashboard'),
+            'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
         ], 201);
     }
 
@@ -51,7 +52,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => '登入成功',
-            'redirect' => route('dashboard'),
+            'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
         ]);
     }
 
@@ -62,7 +63,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route(AuthenticationConstant::ROUTE_LOGIN);
     }
 
     private function render(string $page, ?int $userId = null): View

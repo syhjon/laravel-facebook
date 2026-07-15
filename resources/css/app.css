@@ -1,10 +1,4 @@
 :root {
-    --brand-primary: #28c8c9;
-    --brand-primary-rgb: 40, 200, 201;
-    --brand-primary-hover: #209fa0;
-    --brand-primary-active: #197f80;
-    --brand-primary-text: #126f70;
-    --brand-primary-subtle: #d9f7f7;
     --bs-primary: var(--brand-primary);
     --bs-primary-rgb: var(--brand-primary-rgb);
     --bs-link-color: var(--brand-primary-text);

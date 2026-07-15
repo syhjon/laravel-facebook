@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\CacheManagers\UserCacheManager;
+use App\Constants\ProjectConstant;
+use App\Constants\UserConstant;
 use App\Containers\Authentication\WebAuthenticationContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Http\Controllers\AuthController;
@@ -51,9 +53,14 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertSame('member@example.com', $profile['email']);
         $this->assertTrue(Cache::has($cacheKey));
         $this->assertIsArray(Cache::get($cacheKey));
-        $this->assertSame(1, Cache::get($cacheKey)['version']);
+        $this->assertSame(UserConstant::CACHE_PAYLOAD_VERSION, Cache::get($cacheKey)['version']);
         $this->assertArrayNotHasKey('password', Cache::get($cacheKey)['attributes']);
         $this->assertArrayNotHasKey('remember_token', Cache::get($cacheKey)['attributes']);
+    }
+
+    public function test_project_name_is_sourced_from_project_constants(): void
+    {
+        $this->assertSame(ProjectConstant::NAME, config('app.name'));
     }
 
     public function test_user_cache_recovers_from_an_incomplete_serialized_object(): void
