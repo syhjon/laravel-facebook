@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\ExceptionCodes\AuthenticationExceptionCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +59,7 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'different',
         ])
             ->assertUnprocessable()
+            ->assertJsonPath('code', AuthenticationExceptionCode::REGISTRATION_DATA_INVALID)
             ->assertJsonStructure([
                 'message',
                 'errors' => ['name', 'email', 'password'],
@@ -101,6 +103,7 @@ class AuthenticationTest extends TestCase
 
         $response
             ->assertUnprocessable()
+            ->assertJsonPath('code', AuthenticationExceptionCode::CREDENTIALS_INVALID)
             ->assertJsonStructure([
                 'message',
                 'errors' => ['email'],

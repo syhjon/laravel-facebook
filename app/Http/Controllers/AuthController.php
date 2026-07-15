@@ -2,19 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Checkers\AuthenticationChecker;
+use App\CombinationManagers\AuthenticationPageCombinationManager;
+use App\ServiceManagers\AuthenticationServiceManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AuthenticationChecker $authenticationChecker,
+        private readonly AuthenticationServiceManager $authenticationServiceManager,
+        private readonly AuthenticationPageCombinationManager $pageCombinationManager,
+    ) {}
+
     public function showLogin(): View
     {
         return $this->render('login');
@@ -27,30 +31,17 @@ class AuthController extends Controller
 
     public function dashboard(Request $request): View
     {
-        return $this->render('dashboard', $request->user());
+        return $this->render('dashboard', $request->user()->getKey());
     }
 
     public function register(Request $request): JsonResponse
     {
-        $request->merge([
-            'email' => Str::lower((string) $request->input('email')),
-        ]);
+        $validated = $this->authenticationChecker->checkRegistration($request->all());
 
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
-        ]);
+        DB::transaction(
+            fn () => $this->authenticationServiceManager->register($validated),
+        );
 
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors()->toArray());
-        }
-
-        $validated = $validator->validated();
-
-        $user = User::create($validated);
-
-        Auth::login($user);
         $request->session()->regenerate();
 
         return response()->json([
@@ -61,42 +52,9 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-            'remember' => ['nullable', 'boolean'],
-        ]);
+        $validated = $this->authenticationChecker->checkLogin($request->all());
 
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors()->toArray());
-        }
-
-        $validated = $validator->validated();
-
-        $key = $this->throttleKey($request);
-
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $seconds = RateLimiter::availableIn($key);
-
-            return $this->validationError([
-                'email' => ["登入嘗試次數過多，請在 {$seconds} 秒後再試。"],
-            ]);
-        }
-
-        $credentials = [
-            'email' => Str::lower($validated['email']),
-            'password' => $validated['password'],
-        ];
-
-        if (! Auth::attempt($credentials, (bool) ($validated['remember'] ?? false))) {
-            RateLimiter::hit($key, 60);
-
-            return $this->validationError([
-                'email' => ['Email 或密碼不正確。'],
-            ]);
-        }
-
-        RateLimiter::clear($key);
+        $this->authenticationServiceManager->authenticate($validated, $request->ip());
         $request->session()->regenerate();
 
         return response()->json([
@@ -107,7 +65,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        $this->authenticationServiceManager->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -115,35 +73,10 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
-    private function render(string $page, ?User $user = null): View
+    private function render(string $page, ?int $userId = null): View
     {
         return view('app', [
-            'appData' => [
-                'page' => $page,
-                'user' => $user?->only(['id', 'name', 'email']),
-                'routes' => [
-                    'login' => route('login'),
-                    'register' => route('register'),
-                    'dashboard' => route('dashboard'),
-                    'logout' => route('logout'),
-                ],
-            ],
+            'appData' => $this->pageCombinationManager->build($page, $userId),
         ]);
-    }
-
-    private function throttleKey(Request $request): string
-    {
-        return Str::transliterate(Str::lower((string) $request->input('email')).'|'.$request->ip());
-    }
-
-    /**
-     * @param  array<string, array<int, string>>  $errors
-     */
-    private function validationError(array $errors): JsonResponse
-    {
-        return response()->json([
-            'message' => '輸入資料有誤。',
-            'errors' => $errors,
-        ], 422);
     }
 }

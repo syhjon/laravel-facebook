@@ -233,14 +233,15 @@ async function submit() {
                                     <span class="badge text-bg-success-subtle text-success-emphasis mb-3">已登入</span>
                                     <p class="text-secondary mb-1">歡迎回來</p>
                                     <h1 class="display-6 fw-bold mb-3">{{ app.user.name }}</h1>
-                                    <p class="text-secondary mb-4">{{ app.user.email }}</p>
+                                    <p class="text-secondary mb-1">{{ app.user.email }}</p>
+                                    <p class="small text-secondary mb-4">加入日期：{{ app.user.member_since }}</p>
                                     <div class="alert alert-primary border-0 mb-0">
                                         會員系統已正常運作。你可以從這裡繼續建立個人資料、貼文與好友功能。
                                     </div>
                                 </div>
                                 <div class="col-md-4 dashboard-accent d-flex align-items-center justify-content-center p-5">
                                     <div class="avatar-circle" aria-hidden="true">
-                                        {{ app.user.name.charAt(0).toUpperCase() }}
+                                        {{ app.user.initials }}
                                     </div>
                                 </div>
                             </div>

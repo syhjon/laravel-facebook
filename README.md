@@ -2,6 +2,8 @@
 
 以 Laravel、Vite 與 Vue 建立的 Facebook-like 專案。
 
+專案採用 Combination & Cache 分層設計，開發規範請參閱 [專案架構準則](docs/architecture.md)。
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
