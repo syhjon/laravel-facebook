@@ -27,6 +27,7 @@ class FeedTest extends TestCase
                 'body' => '今天開始使用 WeTalk，和大家分享第一篇貼文。',
             ])
             ->assertCreated()
+            ->assertJsonPath('message', 'Created')
             ->assertJsonPath('data.body', '今天開始使用 WeTalk，和大家分享第一篇貼文。')
             ->assertJsonPath('data.author.id', $user->getKey())
             ->assertJsonPath('data.likes_count', 0)
@@ -46,7 +47,12 @@ class FeedTest extends TestCase
             ->postJson(route(PostConstant::ROUTE_POST_CREATE), ['body' => ''])
             ->assertUnprocessable()
             ->assertJsonPath('code', PostExceptionCode::POST_DATA_INVALID)
-            ->assertJsonStructure(['errors' => ['body']]);
+            ->assertJsonStructure([
+                'message',
+                'data',
+                'duration',
+                'errors' => ['body'],
+            ]);
     }
 
     public function test_feed_uses_ten_item_cursor_pages_without_duplicates(): void
@@ -58,6 +64,7 @@ class FeedTest extends TestCase
             ->getJson(route(PostConstant::ROUTE_FEED))
             ->assertOk()
             ->assertJsonCount(PostConstant::FEED_PER_PAGE, 'data')
+            ->assertJsonPath('message', 'OK')
             ->assertJsonPath('meta.has_more', true);
 
         $firstIds = collect($firstPage->json('data'))->pluck('id');

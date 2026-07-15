@@ -74,6 +74,24 @@ class LayerDependencyTest extends TestCase
         }
     }
 
+    public function test_controllers_delegate_response_creation_and_transactions(): void
+    {
+        foreach ($this->phpFiles(app_path('Http/Controllers')) as $file) {
+            $contents = file_get_contents($file);
+
+            $this->assertStringNotContainsString(
+                'response()->json(',
+                $contents,
+                "{$file} 必須透過 ResponseMakerInterface 製造 JSON 回應",
+            );
+            $this->assertStringNotContainsString(
+                'DB::transaction(',
+                $contents,
+                "{$file} 必須將 transaction 委派給入口 Container",
+            );
+        }
+    }
+
     /**
      * @return array<int, string>
      */

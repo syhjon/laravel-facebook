@@ -5,6 +5,7 @@ namespace App\Containers\Feed;
 use App\Checkers\PostChecker;
 use App\Contracts\Containers\FeedContainerInterface;
 use App\ServiceManagers\PostServiceManager;
+use Illuminate\Support\Facades\DB;
 
 class WebFeedContainer implements FeedContainerInterface
 {
@@ -20,25 +21,33 @@ class WebFeedContainer implements FeedContainerInterface
 
     public function create(array $input, int $userId): array
     {
-        return $this->postServiceManager->create(
-            $userId,
-            $this->postChecker->checkPost($input),
+        return DB::transaction(
+            fn (): array => $this->postServiceManager->create(
+                $userId,
+                $this->postChecker->checkPost($input),
+            ),
         );
     }
 
     public function toggleLike(int $postId, int $userId): array
     {
-        return $this->postServiceManager->toggleLike($postId, $userId);
+        return DB::transaction(
+            fn (): array => $this->postServiceManager->toggleLike($postId, $userId),
+        );
     }
 
     public function comment(array $input, int $postId, int $userId): array
     {
-        $validated = $this->postChecker->checkComment($input);
+        return DB::transaction(
+            function () use ($input, $postId, $userId): array {
+                $validated = $this->postChecker->checkComment($input);
 
-        return $this->postServiceManager->comment(
-            $postId,
-            $userId,
-            $validated['body'],
+                return $this->postServiceManager->comment(
+                    $postId,
+                    $userId,
+                    $validated['body'],
+                );
+            },
         );
     }
 }

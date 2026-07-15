@@ -6,6 +6,7 @@ use App\Checkers\AuthenticationChecker;
 use App\CombinationManagers\AuthenticationPageCombinationManager;
 use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\ServiceManagers\AuthenticationServiceManager;
+use Illuminate\Support\Facades\DB;
 
 class WebAuthenticationContainer implements AuthenticationContainerInterface
 {
@@ -24,7 +25,9 @@ class WebAuthenticationContainer implements AuthenticationContainerInterface
     {
         $validated = $this->authenticationChecker->checkRegistration($input);
 
-        $this->authenticationServiceManager->register($validated);
+        DB::transaction(
+            fn () => $this->authenticationServiceManager->register($validated),
+        );
     }
 
     public function login(array $input, ?string $ipAddress): void

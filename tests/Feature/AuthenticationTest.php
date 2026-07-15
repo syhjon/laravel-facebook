@@ -67,6 +67,8 @@ class AuthenticationTest extends TestCase
             ->assertJsonPath('code', AuthenticationExceptionCode::REGISTRATION_DATA_INVALID)
             ->assertJsonStructure([
                 'message',
+                'data',
+                'duration',
                 'errors' => ['name', 'email', 'password'],
             ]);
     }

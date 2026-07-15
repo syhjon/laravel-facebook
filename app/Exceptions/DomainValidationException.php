@@ -2,6 +2,8 @@
 
 namespace App\Exceptions;
 
+use App\Constants\HttpCodeConstant;
+use App\Contracts\Responses\ResponseMakerInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -21,10 +23,13 @@ class DomainValidationException extends RuntimeException
 
     public function render(Request $request): JsonResponse
     {
-        return response()->json([
-            'message' => $this->getMessage(),
-            'code' => $this->exceptionCode,
-            'errors' => $this->errors,
-        ], 422);
+        return resolve(ResponseMakerInterface::class)->make(
+            httpCode: HttpCodeConstant::UNPROCESSABLE_ENTITY,
+            message: $this->getMessage(),
+            additional: [
+                'code' => $this->exceptionCode,
+                'errors' => $this->errors,
+            ],
+        );
     }
 }

@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Constants\AuthenticationConstant;
+use App\Constants\HttpCodeConstant;
 use App\Contracts\Containers\AuthenticationContainerInterface;
+use App\Contracts\Responses\ResponseMakerInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthenticationContainerInterface $authenticationContainer,
-    ) {}
+        ResponseMakerInterface $responseMaker,
+    ) {
+        parent::__construct($responseMaker);
+    }
 
     public function showLogin(): View
     {
@@ -33,16 +37,17 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
-        DB::transaction(
-            fn () => $this->authenticationContainer->register($request->all()),
-        );
+        $this->authenticationContainer->register($request->all());
 
         $request->session()->regenerate();
 
-        return response()->json([
-            'message' => '註冊成功',
-            'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
-        ], 201);
+        return $this->responseMaker->make(
+            httpCode: HttpCodeConstant::CREATED,
+            message: '註冊成功',
+            additional: [
+                'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
+            ],
+        );
     }
 
     public function login(Request $request): JsonResponse
@@ -50,10 +55,12 @@ class AuthController extends Controller
         $this->authenticationContainer->login($request->all(), $request->ip());
         $request->session()->regenerate();
 
-        return response()->json([
-            'message' => '登入成功',
-            'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
-        ]);
+        return $this->responseMaker->make(
+            message: '登入成功',
+            additional: [
+                'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
+            ],
+        );
     }
 
     public function logout(Request $request): RedirectResponse

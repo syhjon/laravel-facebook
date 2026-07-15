@@ -8,10 +8,12 @@ use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\Contracts\Containers\FeedContainerInterface;
 use App\Contracts\Repositories\PostRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Contracts\Responses\ResponseMakerInterface;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedController;
 use App\Repositories\PostRepository;
 use App\Repositories\UserRepository;
+use App\Responses\JsonResponseMaker;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(PostRepositoryInterface::class, PostRepository::class);
+        $this->app->singleton(ResponseMakerInterface::class, JsonResponseMaker::class);
 
         $this->app
             ->when(AuthController::class)

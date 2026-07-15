@@ -8,10 +8,12 @@ use App\Constants\UserConstant;
 use App\Containers\Authentication\WebAuthenticationContainer;
 use App\Containers\Feed\WebFeedContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Contracts\Responses\ResponseMakerInterface;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedController;
 use App\Models\User;
 use App\Repositories\UserRepository;
+use App\Responses\JsonResponseMaker;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -29,14 +31,27 @@ class ArchitectureIntegrationTest extends TestCase
         );
     }
 
+    public function test_response_maker_contract_is_bound_to_the_json_response_maker(): void
+    {
+        $this->assertInstanceOf(
+            JsonResponseMaker::class,
+            $this->app->make(ResponseMakerInterface::class),
+        );
+    }
+
     public function test_auth_controller_receives_the_web_authentication_container_contextually(): void
     {
         $controller = $this->app->make(AuthController::class);
         $property = new \ReflectionProperty($controller, 'authenticationContainer');
+        $responseMaker = new \ReflectionProperty($controller, 'responseMaker');
 
         $this->assertInstanceOf(
             WebAuthenticationContainer::class,
             $property->getValue($controller),
+        );
+        $this->assertInstanceOf(
+            ResponseMakerInterface::class,
+            $responseMaker->getValue($controller),
         );
     }
 
@@ -44,10 +59,15 @@ class ArchitectureIntegrationTest extends TestCase
     {
         $controller = $this->app->make(FeedController::class);
         $property = new \ReflectionProperty($controller, 'feedContainer');
+        $responseMaker = new \ReflectionProperty($controller, 'responseMaker');
 
         $this->assertInstanceOf(
             WebFeedContainer::class,
             $property->getValue($controller),
+        );
+        $this->assertInstanceOf(
+            ResponseMakerInterface::class,
+            $responseMaker->getValue($controller),
         );
     }
 

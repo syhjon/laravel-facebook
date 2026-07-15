@@ -6,7 +6,7 @@
 
 ```text
 HTTP Request
-  └─ Controller（流程與 Transaction）
+  └─ Controller（HTTP／Session 與 ResponseMaker Contract）
       └─ Container Contract
           └─ Container（由 Contextual Binding 決定實作）
               ├─ Checker
@@ -18,6 +18,7 @@ HTTP Request
               │       │   └─ Model
               │       │       └─ Presenter
               │       └─ Combination
+              ├─ Transaction（寫入操作由入口 Container 控制）
               └─ CombinationManager
                   ├─ Service
                   └─ Combination
@@ -57,9 +58,11 @@ FeedController
 
 | 目錄 | 職責 |
 | --- | --- |
-| `app/Http/Controllers` | 控制 HTTP/session 與資料交易，只依賴 Container Contract |
+| `app/Http/Controllers` | 控制 HTTP/session 與回應，只依賴 Container／Response Contract |
 | `app/Contracts/Containers` | 定義特定入口可執行的應用操作 |
-| `app/Containers` | 作為 Controller 與應用層的邊界，調用 Service 前先由容器決定該入口的流程組合 |
+| `app/Contracts/Responses` | 定義 HTTP 回應製造介面，隔離 Controller 與 JSON 實作 |
+| `app/Responses` | 實作統一的 message、data、meta、duration 與 datetime 回應格式 |
+| `app/Containers` | 作為 Controller 與應用層的邊界，決定入口流程組合並控制寫入 transaction |
 | `app/Checkers` | 依使用案例組合一或多個 Validator |
 | `app/Validators` | 驗證單一 Model 的欄位資料 |
 | `app/ServiceManagers` | 組合多個 Service 的商業流程 |
@@ -84,7 +87,7 @@ FeedController
 4. 低階層不得反向存取高階層。
 5. 同類型類別不得互相呼叫，避免循環依賴。
 6. CacheManager、Constant、Support、ExceptionCode 為獨立結構，可被各層使用。
-7. 寫入資料的 transaction 由 Controller 統一控制。
+7. 寫入資料的 transaction 由入口 Container 統一控制，Controller 不得直接依賴資料庫 facade。
 8. Container 可組合 Checker、ServiceManager 與 CombinationManager，但不得跳層直接存取 Service、Repository、Validator 或 Model。
 9. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
 
@@ -99,9 +102,11 @@ FeedController
 
 ## Container 選擇規範
 
-- Controller 建構子只注入 `app/Contracts/Containers` 下的介面。
+- Controller 建構子只注入 `app/Contracts/Containers` 與 `app/Contracts/Responses` 下的介面。
+- Controller 不得直接注入具體 Service 或 ServiceManager；若入口需要新的商業流程，應先擴充 Container Contract，再由 Provider 決定實作。
 - `AppServiceProvider` 使用 Laravel contextual binding，依 Controller 決定 Container 實作；因此在任何 Service 被調用前，入口容器已經確定。
-- Container 負責使用案例的編排，不處理 HTTP response、session 或 transaction。
+- Container 負責使用案例與 transaction 的編排，不處理 HTTP response 或 session。
+- `ResponseMakerInterface` 由 `JsonResponseMaker` 實作，Controller 不直接呼叫 `response()->json()`；未來替換回應格式時不必修改 Controller。
 - 例如未來新增 OAuth 入口時，可建立 `OauthAuthenticationContainer`，並將對應 Controller 綁定到該實作，不必修改既有 Service。
 
 上述主要限制由 `tests/Unit/LayerDependencyTest.php` 自動檢查。
