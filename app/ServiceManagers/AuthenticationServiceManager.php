@@ -2,10 +2,11 @@
 
 namespace App\ServiceManagers;
 
+use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
 use App\Services\AuthenticationService;
 use App\Services\UserService;
 
-class AuthenticationServiceManager
+class AuthenticationServiceManager implements AuthenticationServiceManagerInterface
 {
     public function __construct(
         private readonly AuthenticationService $authenticationService,

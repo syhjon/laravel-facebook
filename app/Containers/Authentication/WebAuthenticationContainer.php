@@ -4,14 +4,15 @@ namespace App\Containers\Authentication;
 
 use App\CombinationManagers\AuthenticationPageCombinationManager;
 use App\Contracts\Containers\AuthenticationContainerInterface;
-use App\ServiceManagers\AuthenticationServiceManager;
-use Illuminate\Support\Facades\DB;
+use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
+use App\Contracts\Transactions\TransactionManagerInterface;
 
 class WebAuthenticationContainer implements AuthenticationContainerInterface
 {
     public function __construct(
-        private readonly AuthenticationServiceManager $authenticationServiceManager,
+        private readonly AuthenticationServiceManagerInterface $authenticationServiceManager,
         private readonly AuthenticationPageCombinationManager $pageCombinationManager,
+        private readonly TransactionManagerInterface $transactionManager,
     ) {}
 
     public function page(string $page, ?int $userId = null): array
@@ -21,7 +22,7 @@ class WebAuthenticationContainer implements AuthenticationContainerInterface
 
     public function register(array $attributes): void
     {
-        DB::transaction(
+        $this->transactionManager->run(
             fn () => $this->authenticationServiceManager->register($attributes),
         );
     }

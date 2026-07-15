@@ -9,14 +9,24 @@ use App\Containers\Authentication\WebAuthenticationContainer;
 use App\Containers\Feed\WebFeedContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
+use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
+use App\Contracts\ServiceManagers\PostServiceManagerInterface;
+use App\Contracts\Transactions\TransactionManagerInterface;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedController;
 use App\Models\User;
+use App\Providers\ApplicationServiceProvider;
+use App\Providers\EntryContextServiceProvider;
+use App\Providers\RepositoryServiceProvider;
 use App\Repositories\UserRepository;
 use App\Responses\JsonResponseMaker;
+use App\ServiceManagers\AuthenticationServiceManager;
+use App\ServiceManagers\PostServiceManager;
 use App\Services\UserService;
+use App\Transactions\DatabaseTransactionManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use RuntimeException;
 use Tests\TestCase;
 
 class ArchitectureIntegrationTest extends TestCase
@@ -37,6 +47,48 @@ class ArchitectureIntegrationTest extends TestCase
             JsonResponseMaker::class,
             $this->app->make(ResponseMakerInterface::class),
         );
+    }
+
+    public function test_application_contracts_are_bound_to_their_implementations(): void
+    {
+        $this->assertInstanceOf(
+            AuthenticationServiceManager::class,
+            $this->app->make(AuthenticationServiceManagerInterface::class),
+        );
+        $this->assertInstanceOf(
+            PostServiceManager::class,
+            $this->app->make(PostServiceManagerInterface::class),
+        );
+        $this->assertInstanceOf(
+            DatabaseTransactionManager::class,
+            $this->app->make(TransactionManagerInterface::class),
+        );
+    }
+
+    public function test_layer_specific_service_providers_are_loaded(): void
+    {
+        $providers = $this->app->getLoadedProviders();
+
+        $this->assertArrayHasKey(RepositoryServiceProvider::class, $providers);
+        $this->assertArrayHasKey(ApplicationServiceProvider::class, $providers);
+        $this->assertArrayHasKey(EntryContextServiceProvider::class, $providers);
+    }
+
+    public function test_transaction_manager_rolls_back_failed_work(): void
+    {
+        try {
+            $this->app->make(TransactionManagerInterface::class)->run(function (): void {
+                User::factory()->create(['email' => 'rollback@example.com']);
+
+                throw new RuntimeException('Rollback test.');
+            });
+
+            $this->fail('Transaction manager should rethrow the original exception.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Rollback test.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
     }
 
     public function test_auth_controller_receives_the_web_authentication_container_contextually(): void

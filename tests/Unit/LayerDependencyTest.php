@@ -33,6 +33,7 @@ class LayerDependencyTest extends TestCase
                 'App\\Containers\\',
                 'App\\Models\\',
                 'App\\Repositories\\',
+                'App\\ServiceManagers\\',
                 'App\\Services\\',
                 'App\\Validators\\',
             ],
@@ -106,6 +107,24 @@ class LayerDependencyTest extends TestCase
                 '/\$request\s*\[/',
                 $contents,
                 "{$file} 不得用陣列方式直接讀取 Request",
+            );
+        }
+    }
+
+    public function test_containers_delegate_transactions_and_service_manager_resolution(): void
+    {
+        foreach ($this->phpFiles(app_path('Containers')) as $file) {
+            $contents = file_get_contents($file);
+
+            $this->assertStringNotContainsString(
+                'Illuminate\\Support\\Facades\\DB',
+                $contents,
+                "{$file} 必須透過 TransactionManagerInterface 控制交易",
+            );
+            $this->assertDoesNotMatchRegularExpression(
+                '/^use\s+App\\\\ServiceManagers\\\\/m',
+                $contents,
+                "{$file} 必須依賴 ServiceManager contract，而非具體實作",
             );
         }
     }

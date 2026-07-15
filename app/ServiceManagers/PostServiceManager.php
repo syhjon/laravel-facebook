@@ -3,9 +3,10 @@
 namespace App\ServiceManagers;
 
 use App\Combinations\PostCombination;
+use App\Contracts\ServiceManagers\PostServiceManagerInterface;
 use App\Services\PostService;
 
-class PostServiceManager
+class PostServiceManager implements PostServiceManagerInterface
 {
     public function __construct(
         private readonly PostService $postService,

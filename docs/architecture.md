@@ -12,14 +12,16 @@ HTTP Request
       └─ Controller（HTTP／Session 與 ResponseMaker Contract）
           └─ Container Contract
               └─ Container（由 Contextual Binding 決定實作）
-                  ├─ ServiceManager
-                  │   └─ Service
-                  │       ├─ Repository
-                  │       │   ├─ CacheManager
-                  │       │   └─ Model
-                  │       │       └─ Presenter
-                  │       └─ Combination
-                  ├─ Transaction（寫入操作由入口 Container 控制）
+                  ├─ ServiceManager Contract
+                  │   └─ ServiceManager
+                  │       └─ Service
+                  │           ├─ Repository
+                  │           │   ├─ CacheManager
+                  │           │   └─ Model
+                  │           │       └─ Presenter
+                  │           └─ Combination
+                  ├─ TransactionManager Contract
+                  │   └─ DatabaseTransactionManager
                   └─ CombinationManager
                       ├─ Service
                       └─ Combination
@@ -32,8 +34,8 @@ AuthController
   ├─ RegisterRequest／LoginRequest
   │   └─ AuthenticationChecker → UserValidator
   └─ AuthenticationContainerInterface
-      └─ WebAuthenticationContainer（AppServiceProvider 決定）
-          ├─ AuthenticationServiceManager
+      └─ WebAuthenticationContainer（EntryContextServiceProvider 決定）
+          ├─ AuthenticationServiceManagerInterface → AuthenticationServiceManager
           │   ├─ AuthenticationService
           │   └─ UserService → UserRepository → User Model → UserPresenter
           │                         └─ UserCacheManager
@@ -49,8 +51,8 @@ FeedController
   ├─ FeedIndexRequest／StorePostRequest／StoreCommentRequest
   │   └─ PostChecker → PostValidator
   └─ FeedContainerInterface
-      └─ WebFeedContainer（AppServiceProvider 決定）
-          └─ PostServiceManager
+      └─ WebFeedContainer（EntryContextServiceProvider 決定）
+          └─ PostServiceManagerInterface → PostServiceManager
               ├─ PostService → PostRepository → Post／Comment／PostLike Model
               └─ PostCombination
 ```
@@ -65,8 +67,11 @@ FeedController
 | `app/Http/Requests` | 正規化與驗證 HTTP input，提供明確型別的 payload、cursor 與登入者 ID |
 | `app/Contracts/Containers` | 定義特定入口可執行的應用操作 |
 | `app/Contracts/Responses` | 定義 HTTP 回應製造介面，隔離 Controller 與 JSON 實作 |
+| `app/Contracts/ServiceManagers` | 定義入口 Container 可使用的商業流程介面 |
+| `app/Contracts/Transactions` | 定義 transaction 執行邊界，隔離應用流程與資料庫實作 |
 | `app/Responses` | 實作統一的 message、data、meta、duration 與 datetime 回應格式 |
 | `app/Containers` | 作為 Controller 與應用層的邊界，決定入口流程組合並控制寫入 transaction |
+| `app/Transactions` | 使用 Laravel database connection 實作 transaction、rollback 與重試 |
 | `app/Checkers` | 依使用案例組合一或多個 Validator 規則，透過 FormRequest method injection 解析 |
 | `app/Validators` | 提供單一領域資料的 Laravel validation rules |
 | `app/ServiceManagers` | 組合多個 Service 的商業流程 |
@@ -82,6 +87,7 @@ FeedController
 | `app/Supports` | 無領域狀態、可獨立完成的共用轉換邏輯 |
 | `app/ExceptionCodes` | 集中管理領域錯誤代碼 |
 | `app/Exceptions` | 領域例外與一致的 HTTP 回應格式 |
+| `app/Providers` | 依 Repository、Application infrastructure、Entry Context 分開註冊 container bindings |
 
 ## 存取限制
 
@@ -91,8 +97,8 @@ FeedController
 4. 低階層不得反向存取高階層。
 5. 同類型類別不得互相呼叫，避免循環依賴。
 6. CacheManager、Constant、Support、ExceptionCode 為獨立結構，可被各層使用。
-7. 寫入資料的 transaction 由入口 Container 統一控制，Controller 不得直接依賴資料庫 facade。
-8. FormRequest 透過 Checker 取得 Validator 規則；Container 只接收已驗證資料，可組合 ServiceManager 與 CombinationManager，但不得跳層直接存取 Service、Repository、Validator 或 Model。
+7. 寫入資料的 transaction 由入口 Container 透過 `TransactionManagerInterface` 控制；Controller 與 Container 都不得直接依賴資料庫 facade。
+8. FormRequest 透過 Checker 取得 Validator 規則；Container 只接收已驗證資料，並只依賴 ServiceManager contract，不得跳層直接存取具體 ServiceManager、Service、Repository、Validator 或 Model。
 9. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
 10. Controller 禁止使用 `$request->all()` 或 `$request[...]`；輸入資料必須來自 FormRequest 的明確方法。
 
@@ -110,12 +116,25 @@ FeedController
 - Controller 建構子只注入 `app/Contracts/Containers` 與 `app/Contracts/Responses` 下的介面。
 - Controller action 只接受對應的 FormRequest，不得將 Laravel Request 物件傳入 Container、ServiceManager 或 Service。
 - Controller 不得直接注入具體 Service 或 ServiceManager；若入口需要新的商業流程，應先擴充 Container Contract，再由 Provider 決定實作。
-- `AppServiceProvider` 使用 Laravel contextual binding，依 Controller 決定 Container 實作；因此在任何 Service 被調用前，入口容器已經確定。
+- `EntryContextServiceProvider` 使用 Laravel contextual binding，依 Controller 決定 Container 實作；因此在任何 Service 被調用前，入口容器已經確定。
 - Container 負責使用案例與 transaction 的編排，不處理 HTTP response 或 session。
+- `EntryContextServiceProvider` 只負責 Controller → Container 的 contextual binding。
+- `ApplicationServiceProvider` 負責 ServiceManager、ResponseMaker 與 TransactionManager contracts。
+- `RepositoryServiceProvider` 只負責 Repository contract → Eloquent Repository bindings。
 - `ResponseMakerInterface` 由 `JsonResponseMaker` 實作，Controller 不直接呼叫 `response()->json()`；未來替換回應格式時不必修改 Controller。
 - 例如未來新增 OAuth 入口時，可建立 `OauthAuthenticationContainer`，並將對應 Controller 綁定到該實作，不必修改既有 Service。
 
 上述主要限制由 `tests/Unit/LayerDependencyTest.php` 自動檢查。
+
+## Taichi API 參考架構採用原則
+
+本專案採用參考專案的 Repository Provider、ServiceManage contract、Combination／CombinationManage 與交易封裝概念，但依 Laravel 13 與目前規模作以下調整：
+
+- 保留：各層專屬 Service Provider、Repository interface、ServiceManager 流程編排、Combination 輸出整理、情境式 Container 選擇。
+- 改良：以 constructor injection 與固定 contract binding 取代執行途中呼叫全域 `App::bind()`，避免長駐程序發生跨請求狀態污染。
+- 改良：以無狀態 `TransactionManagerInterface` 取代 DB transaction trait，便於測試 rollback 與替換資料庫實作。
+- 不採用：具可變回傳狀態的 AbstractService／AbstractCombination、Controller 直接 new Repository、Request 傳入 Service，以及 trait 型 response maker。
+- 安全：參考壓縮檔內的 `.env`、OAuth key、`.git`、`vendor` 與 runtime storage 不屬於架構來源，禁止複製進本專案。
 
 ## Cache 規範
 
@@ -147,6 +166,6 @@ FeedController
 6. 衍生欄位放入 `PostPresenter` 或 `PostCombination`。
 7. 跨來源頁面資料由 `PostCombinationManager` 組合。
 8. 複雜查詢需要快取時建立 `PostCacheManager`。
-9. 建立 `PostContainerInterface` 與入口所需的 Container 實作，並於 `AppServiceProvider` 設定 contextual binding。
+9. 建立 `PostContainerInterface` 與入口所需的 Container 實作，並於 `EntryContextServiceProvider` 設定 contextual binding。
 10. Controller 只把 FormRequest 的已驗證資料交給 `PostContainerInterface`；transaction 由 Container 控制。
 11. 增加行為測試、Request 邊界測試與分層限制測試。
