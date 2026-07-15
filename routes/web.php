@@ -1,7 +1,9 @@
 <?php
 
 use App\Constants\AuthenticationConstant;
+use App\Constants\PostConstant;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FeedController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -25,4 +27,12 @@ Route::middleware('auth')->group(function () {
         ->name(AuthenticationConstant::ROUTE_DASHBOARD);
     Route::post(AuthenticationConstant::URI_LOGOUT, [AuthController::class, 'logout'])
         ->name(AuthenticationConstant::ROUTE_LOGOUT);
+    Route::get(PostConstant::URI_FEED, [FeedController::class, 'index'])
+        ->name(PostConstant::ROUTE_FEED);
+    Route::post(PostConstant::URI_POSTS, [FeedController::class, 'store'])
+        ->name(PostConstant::ROUTE_POST_CREATE);
+    Route::post(PostConstant::URI_POST_LIKE, [FeedController::class, 'toggleLike'])
+        ->name(PostConstant::ROUTE_POST_LIKE);
+    Route::post(PostConstant::URI_POST_COMMENT, [FeedController::class, 'storeComment'])
+        ->name(PostConstant::ROUTE_POST_COMMENT);
 });

@@ -39,6 +39,20 @@ AuthController
               └─ AuthenticationPageCombination
 ```
 
+貼文牆流程：
+
+```text
+FeedController
+  └─ FeedContainerInterface
+      └─ WebFeedContainer（AppServiceProvider 決定）
+          ├─ PostChecker → PostValidator
+          └─ PostServiceManager
+              ├─ PostService → PostRepository → Post／Comment／PostLike Model
+              └─ PostCombination
+```
+
+貼文列表使用 `PostConstant::FEED_PER_PAGE` 控制每批筆數，並採用依 `posts.id` 倒序的 cursor pagination，供 Vue `IntersectionObserver` 進行無限滾動續載。
+
 ## 目錄職責
 
 | 目錄 | 職責 |
@@ -81,6 +95,7 @@ AuthController
 - 資料庫連線、外部服務憑證、主機 URL 等會隨部署環境變動或涉及機密的設定，維持於 `.env` 與 `config`，不得放入 Constants。
 - 可翻譯的使用者文案應放入語系檔；Constants 不負責取代 Laravel localization。
 - `ProjectConstant` 管理專案名稱與品牌視覺參數，`AuthenticationConstant` 管理登入／註冊流程參數，`UserConstant` 管理會員與快取參數。
+- `PostConstant` 管理貼文長度、回覆長度、每批載入筆數、route 與 URI。
 
 ## Container 選擇規範
 
@@ -105,6 +120,7 @@ AuthController
 | --- | --- |
 | `1101xxx` | 註冊、登入與驗證流程 |
 | `1201xxx` | 會員資料流程 |
+| `1301xxx` | 貼文、按讚與回覆流程 |
 
 新增錯誤時，應先在對應的 `ExceptionCodes` 類別定義，再由領域例外輸出 `message`、`code` 與欄位 `errors`。
 

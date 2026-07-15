@@ -3,13 +3,14 @@
 namespace App\Combinations;
 
 use App\Constants\AuthenticationConstant;
+use App\Constants\PostConstant;
 use App\Constants\ProjectConstant;
 
 class AuthenticationPageCombination
 {
     /**
      * @param  array<string, mixed>|null  $user
-     * @return array{project: array{name: string, technology_label: string, theme: array<string, string>}, constraints: array<string, int>, page: string, user: array<string, mixed>|null, routes: array<string, string>}
+     * @return array<string, mixed>
      */
     public function page(string $page, ?array $user): array
     {
@@ -30,6 +31,13 @@ class AuthenticationPageCombination
                 'name_max_length' => AuthenticationConstant::NAME_MAX_LENGTH,
                 'email_max_length' => AuthenticationConstant::EMAIL_MAX_LENGTH,
                 'password_min_length' => AuthenticationConstant::PASSWORD_MIN_LENGTH,
+                'post_max_length' => PostConstant::BODY_MAX_LENGTH,
+                'comment_max_length' => PostConstant::COMMENT_MAX_LENGTH,
+            ],
+            'pages' => [
+                'login' => AuthenticationConstant::PAGE_LOGIN,
+                'register' => AuthenticationConstant::PAGE_REGISTER,
+                'dashboard' => AuthenticationConstant::PAGE_DASHBOARD,
             ],
             'page' => $page,
             'user' => $user,
@@ -38,6 +46,10 @@ class AuthenticationPageCombination
                 'register' => route(AuthenticationConstant::ROUTE_REGISTER),
                 'dashboard' => route(AuthenticationConstant::ROUTE_DASHBOARD),
                 'logout' => route(AuthenticationConstant::ROUTE_LOGOUT),
+                'feed' => route(PostConstant::ROUTE_FEED),
+                'post_create' => route(PostConstant::ROUTE_POST_CREATE),
+                'post_like_pattern' => PostConstant::URI_POST_LIKE,
+                'post_comment_pattern' => PostConstant::URI_POST_COMMENT,
             ],
         ];
     }

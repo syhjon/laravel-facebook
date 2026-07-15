@@ -13,7 +13,7 @@ class AuthenticationPageCombinationManager
     ) {}
 
     /**
-     * @return array{project: array{name: string, technology_label: string, theme: array<string, string>}, constraints: array<string, int>, page: string, user: array<string, mixed>|null, routes: array<string, string>}
+     * @return array<string, mixed>
      */
     public function build(string $page, ?int $userId = null): array
     {

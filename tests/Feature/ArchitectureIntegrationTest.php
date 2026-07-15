@@ -6,8 +6,10 @@ use App\CacheManagers\UserCacheManager;
 use App\Constants\ProjectConstant;
 use App\Constants\UserConstant;
 use App\Containers\Authentication\WebAuthenticationContainer;
+use App\Containers\Feed\WebFeedContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FeedController;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Services\UserService;
@@ -34,6 +36,17 @@ class ArchitectureIntegrationTest extends TestCase
 
         $this->assertInstanceOf(
             WebAuthenticationContainer::class,
+            $property->getValue($controller),
+        );
+    }
+
+    public function test_feed_controller_receives_the_web_feed_container_contextually(): void
+    {
+        $controller = $this->app->make(FeedController::class);
+        $property = new \ReflectionProperty($controller, 'feedContainer');
+
+        $this->assertInstanceOf(
+            WebFeedContainer::class,
             $property->getValue($controller),
         );
     }
