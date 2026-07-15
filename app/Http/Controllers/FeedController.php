@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Constants\HttpCodeConstant;
 use App\Contracts\Containers\FeedContainerInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
+use App\Http\Requests\ApplicationRequest;
+use App\Http\Requests\Feed\FeedIndexRequest;
+use App\Http\Requests\Feed\StoreCommentRequest;
+use App\Http\Requests\Feed\StorePostRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class FeedController extends Controller
 {
@@ -17,13 +20,11 @@ class FeedController extends Controller
         parent::__construct($responseMaker);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(FeedIndexRequest $request): JsonResponse
     {
-        $cursor = $request->string('cursor')->toString() ?: null;
-
         $feed = $this->feedContainer->feed(
-            $cursor,
-            $request->user()->getKey(),
+            $request->cursor(),
+            $request->userId(),
         );
 
         return $this->responseMaker->makeWithMeta(
@@ -32,11 +33,11 @@ class FeedController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePostRequest $request): JsonResponse
     {
         $post = $this->feedContainer->create(
-            $request->all(),
-            $request->user()->getKey(),
+            $request->payload(),
+            $request->userId(),
         );
 
         return $this->responseMaker->make(
@@ -45,22 +46,22 @@ class FeedController extends Controller
         );
     }
 
-    public function toggleLike(Request $request, int $postId): JsonResponse
+    public function toggleLike(ApplicationRequest $request, int $postId): JsonResponse
     {
         $post = $this->feedContainer->toggleLike(
             $postId,
-            $request->user()->getKey(),
+            $request->userId(),
         );
 
         return $this->responseMaker->make(data: $post);
     }
 
-    public function storeComment(Request $request, int $postId): JsonResponse
+    public function storeComment(StoreCommentRequest $request, int $postId): JsonResponse
     {
         $post = $this->feedContainer->comment(
-            $request->all(),
+            $request->body(),
             $postId,
-            $request->user()->getKey(),
+            $request->userId(),
         );
 
         return $this->responseMaker->make(

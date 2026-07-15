@@ -2,7 +2,6 @@
 
 namespace App\Checkers;
 
-use App\Supports\EmailSupport;
 use App\Validators\UserValidator;
 
 class AuthenticationChecker
@@ -12,24 +11,18 @@ class AuthenticationChecker
     ) {}
 
     /**
-     * @param  array<string, mixed>  $input
-     * @return array{name: string, email: string, password: string}
+     * @return array<string, mixed>
      */
-    public function checkRegistration(array $input): array
+    public function registrationRules(): array
     {
-        $input['email'] = EmailSupport::normalize($input['email'] ?? null);
-
-        return $this->userValidator->validateRegistration($input);
+        return $this->userValidator->registrationRules();
     }
 
     /**
-     * @param  array<string, mixed>  $input
-     * @return array{email: string, password: string, remember?: bool}
+     * @return array<string, mixed>
      */
-    public function checkLogin(array $input): array
+    public function loginRules(): array
     {
-        $input['email'] = EmailSupport::normalize($input['email'] ?? null);
-
-        return $this->userValidator->validateLogin($input);
+        return $this->userValidator->loginRules();
     }
 }

@@ -83,6 +83,17 @@ class FeedTest extends TestCase
         $this->assertTrue($firstIds->first() > $firstIds->last());
     }
 
+    public function test_feed_cursor_is_validated_before_reaching_the_container(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson(route(PostConstant::ROUTE_FEED).'?cursor='.str_repeat('x', PostConstant::CURSOR_MAX_LENGTH + 1))
+            ->assertUnprocessable()
+            ->assertJsonPath('code', PostExceptionCode::FEED_QUERY_INVALID)
+            ->assertJsonStructure(['errors' => ['cursor']]);
+    }
+
     public function test_user_can_toggle_a_post_like(): void
     {
         $user = User::factory()->create();
@@ -125,5 +136,20 @@ class FeedTest extends TestCase
             'post_id' => $post->getKey(),
             'user_id' => $commenter->getKey(),
         ]);
+    }
+
+    public function test_comment_content_is_validated_before_reaching_the_container(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->postJson(
+                route(PostConstant::ROUTE_POST_COMMENT, ['postId' => $post->getKey()]),
+                ['body' => ''],
+            )
+            ->assertUnprocessable()
+            ->assertJsonPath('code', PostExceptionCode::COMMENT_DATA_INVALID)
+            ->assertJsonStructure(['errors' => ['body']]);
     }
 }

@@ -10,6 +10,8 @@ final class PostConstant
 
     public const COMMENT_MAX_LENGTH = 500;
 
+    public const CURSOR_MAX_LENGTH = 2048;
+
     public const ROUTE_FEED = 'feed.index';
 
     public const ROUTE_POST_CREATE = 'posts.store';

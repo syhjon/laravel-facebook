@@ -10,14 +10,14 @@ interface AuthenticationContainerInterface
     public function page(string $page, ?int $userId = null): array;
 
     /**
-     * @param  array<string, mixed>  $input
+     * @param  array{name: string, email: string, password: string}  $attributes
      */
-    public function register(array $input): void;
+    public function register(array $attributes): void;
 
     /**
-     * @param  array<string, mixed>  $input
+     * @param  array{email: string, password: string, remember: bool}  $credentials
      */
-    public function login(array $input, ?string $ipAddress): void;
+    public function login(array $credentials, ?string $ipAddress): void;
 
     public function logout(): void;
 }

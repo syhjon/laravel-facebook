@@ -6,9 +6,11 @@ use App\Constants\AuthenticationConstant;
 use App\Constants\HttpCodeConstant;
 use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
+use App\Http\Requests\ApplicationRequest;
+use App\Http\Requests\Authentication\LoginRequest;
+use App\Http\Requests\Authentication\RegisterRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -30,14 +32,14 @@ class AuthController extends Controller
         return $this->render(AuthenticationConstant::PAGE_REGISTER);
     }
 
-    public function dashboard(Request $request): View
+    public function dashboard(ApplicationRequest $request): View
     {
-        return $this->render(AuthenticationConstant::PAGE_DASHBOARD, $request->user()->getKey());
+        return $this->render(AuthenticationConstant::PAGE_DASHBOARD, $request->userId());
     }
 
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $this->authenticationContainer->register($request->all());
+        $this->authenticationContainer->register($request->payload());
 
         $request->session()->regenerate();
 
@@ -50,9 +52,9 @@ class AuthController extends Controller
         );
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $this->authenticationContainer->login($request->all(), $request->ip());
+        $this->authenticationContainer->login($request->payload(), $request->ip());
         $request->session()->regenerate();
 
         return $this->responseMaker->make(
@@ -63,7 +65,7 @@ class AuthController extends Controller
         );
     }
 
-    public function logout(Request $request): RedirectResponse
+    public function logout(ApplicationRequest $request): RedirectResponse
     {
         $this->authenticationContainer->logout();
 

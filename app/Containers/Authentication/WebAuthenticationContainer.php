@@ -2,7 +2,6 @@
 
 namespace App\Containers\Authentication;
 
-use App\Checkers\AuthenticationChecker;
 use App\CombinationManagers\AuthenticationPageCombinationManager;
 use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\ServiceManagers\AuthenticationServiceManager;
@@ -11,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 class WebAuthenticationContainer implements AuthenticationContainerInterface
 {
     public function __construct(
-        private readonly AuthenticationChecker $authenticationChecker,
         private readonly AuthenticationServiceManager $authenticationServiceManager,
         private readonly AuthenticationPageCombinationManager $pageCombinationManager,
     ) {}
@@ -21,20 +19,16 @@ class WebAuthenticationContainer implements AuthenticationContainerInterface
         return $this->pageCombinationManager->build($page, $userId);
     }
 
-    public function register(array $input): void
+    public function register(array $attributes): void
     {
-        $validated = $this->authenticationChecker->checkRegistration($input);
-
         DB::transaction(
-            fn () => $this->authenticationServiceManager->register($validated),
+            fn () => $this->authenticationServiceManager->register($attributes),
         );
     }
 
-    public function login(array $input, ?string $ipAddress): void
+    public function login(array $credentials, ?string $ipAddress): void
     {
-        $validated = $this->authenticationChecker->checkLogin($input);
-
-        $this->authenticationServiceManager->authenticate($validated, $ipAddress);
+        $this->authenticationServiceManager->authenticate($credentials, $ipAddress);
     }
 
     public function logout(): void

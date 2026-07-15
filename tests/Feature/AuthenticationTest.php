@@ -96,6 +96,19 @@ class AuthenticationTest extends TestCase
             ->assertSee($user->email);
     }
 
+    public function test_login_request_rejects_invalid_input_before_authentication(): void
+    {
+        $this->postJson(route(AuthenticationConstant::ROUTE_LOGIN), [
+            'email' => 'not-an-email',
+            'password' => '',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('code', AuthenticationExceptionCode::LOGIN_DATA_INVALID)
+            ->assertJsonStructure(['errors' => ['email', 'password']]);
+
+        $this->assertGuest();
+    }
+
     public function test_login_rejects_invalid_credentials(): void
     {
         User::factory()->create([

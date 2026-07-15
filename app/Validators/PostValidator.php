@@ -3,49 +3,34 @@
 namespace App\Validators;
 
 use App\Constants\PostConstant;
-use App\ExceptionCodes\PostExceptionCode;
-use App\Exceptions\DomainValidationException;
-use Illuminate\Support\Facades\Validator;
 
 class PostValidator
 {
-    /** @return array{body: string} */
-    public function validatePost(array $input): array
+    /** @return array<string, mixed> */
+    public function feedRules(): array
     {
-        return $this->validateBody(
-            $input,
-            PostConstant::BODY_MAX_LENGTH,
-            PostExceptionCode::POST_DATA_INVALID,
-        );
+        return [
+            'cursor' => ['nullable', 'string', 'max:'.PostConstant::CURSOR_MAX_LENGTH],
+        ];
     }
 
-    /** @return array{body: string} */
-    public function validateComment(array $input): array
+    /** @return array<string, mixed> */
+    public function postRules(): array
     {
-        return $this->validateBody(
-            $input,
-            PostConstant::COMMENT_MAX_LENGTH,
-            PostExceptionCode::COMMENT_DATA_INVALID,
-        );
+        return $this->bodyRules(PostConstant::BODY_MAX_LENGTH);
     }
 
-    /** @return array{body: string} */
-    private function validateBody(array $input, int $maxLength, int $exceptionCode): array
+    /** @return array<string, mixed> */
+    public function commentRules(): array
     {
-        $validator = Validator::make($input, [
+        return $this->bodyRules(PostConstant::COMMENT_MAX_LENGTH);
+    }
+
+    /** @return array<string, mixed> */
+    private function bodyRules(int $maxLength): array
+    {
+        return [
             'body' => ['required', 'string', 'max:'.$maxLength],
-        ]);
-
-        if ($validator->fails()) {
-            throw new DomainValidationException(
-                $validator->errors()->toArray(),
-                $exceptionCode,
-            );
-        }
-
-        /** @var array{body: string} $validated */
-        $validated = $validator->validated();
-
-        return $validated;
+        ];
     }
 }

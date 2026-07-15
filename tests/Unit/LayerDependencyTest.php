@@ -21,6 +21,14 @@ class LayerDependencyTest extends TestCase
                 'App\\Validators\\',
                 'App\\Models\\',
             ],
+            'Http/Requests' => [
+                'App\\CombinationManagers\\',
+                'App\\Containers\\',
+                'App\\Models\\',
+                'App\\Repositories\\',
+                'App\\ServiceManagers\\',
+                'App\\Services\\',
+            ],
             'Containers' => [
                 'App\\Containers\\',
                 'App\\Models\\',
@@ -88,6 +96,16 @@ class LayerDependencyTest extends TestCase
                 'DB::transaction(',
                 $contents,
                 "{$file} 必須將 transaction 委派給入口 Container",
+            );
+            $this->assertDoesNotMatchRegularExpression(
+                '/\$request->all\s*\(/',
+                $contents,
+                "{$file} 不得把未驗證的完整 Request 傳入應用層",
+            );
+            $this->assertDoesNotMatchRegularExpression(
+                '/\$request\s*\[/',
+                $contents,
+                "{$file} 不得用陣列方式直接讀取 Request",
             );
         }
     }

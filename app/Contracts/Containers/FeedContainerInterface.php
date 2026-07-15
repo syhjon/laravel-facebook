@@ -6,9 +6,10 @@ interface FeedContainerInterface
 {
     public function feed(?string $cursor, int $viewerId): array;
 
-    public function create(array $input, int $userId): array;
+    /** @param array{body: string} $attributes */
+    public function create(array $attributes, int $userId): array;
 
     public function toggleLike(int $postId, int $userId): array;
 
-    public function comment(array $input, int $postId, int $userId): array;
+    public function comment(string $body, int $postId, int $userId): array;
 }

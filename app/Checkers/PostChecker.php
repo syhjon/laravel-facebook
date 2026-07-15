@@ -10,15 +10,21 @@ class PostChecker
         private readonly PostValidator $postValidator,
     ) {}
 
-    /** @return array{body: string} */
-    public function checkPost(array $input): array
+    /** @return array<string, mixed> */
+    public function feedRules(): array
     {
-        return $this->postValidator->validatePost($input);
+        return $this->postValidator->feedRules();
     }
 
-    /** @return array{body: string} */
-    public function checkComment(array $input): array
+    /** @return array<string, mixed> */
+    public function postRules(): array
     {
-        return $this->postValidator->validateComment($input);
+        return $this->postValidator->postRules();
+    }
+
+    /** @return array<string, mixed> */
+    public function commentRules(): array
+    {
+        return $this->postValidator->commentRules();
     }
 }
