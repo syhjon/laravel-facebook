@@ -56,6 +56,7 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertSame(UserConstant::CACHE_PAYLOAD_VERSION, Cache::get($cacheKey)['version']);
         $this->assertArrayNotHasKey('password', Cache::get($cacheKey)['attributes']);
         $this->assertArrayNotHasKey('remember_token', Cache::get($cacheKey)['attributes']);
+        $this->assertIsString(Cache::get($cacheKey)['attributes']['created_at']);
     }
 
     public function test_project_name_is_sourced_from_project_constants(): void
@@ -83,5 +84,30 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertTrue($resolved->is($user));
         $this->assertIsArray(Cache::get($cacheKey));
         $this->assertSame($user->getKey(), Cache::get($cacheKey)['attributes']['id']);
+    }
+
+    public function test_user_cache_recovers_when_a_cached_attribute_is_an_incomplete_object(): void
+    {
+        $user = User::factory()->create();
+        $cacheManager = $this->app->make(UserCacheManager::class);
+        $cacheKey = $cacheManager->key($user->getKey());
+
+        Cache::put($cacheKey, [
+            'version' => UserConstant::CACHE_PAYLOAD_VERSION,
+            'attributes' => [
+                'id' => $user->getKey(),
+                'name' => $user->name,
+                'email' => $user->email,
+                'created_at' => unserialize('O:17:"MissingCacheClass":0:{}'),
+            ],
+        ], 60);
+
+        $resolved = $cacheManager->remember(
+            $user->getKey(),
+            fn (): User => $user,
+        );
+
+        $this->assertTrue($resolved->is($user));
+        $this->assertIsString(Cache::get($cacheKey)['attributes']['created_at']);
     }
 }

@@ -5,6 +5,7 @@ namespace App\CacheManagers;
 use App\Constants\UserConstant;
 use App\Models\User;
 use Closure;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 
 class UserCacheManager
@@ -21,12 +22,6 @@ class UserCacheManager
     {
         $key = $this->key($userId);
         $cached = Cache::get($key);
-
-        if ($cached instanceof User) {
-            $this->store($key, $cached);
-
-            return $cached;
-        }
 
         if ($this->isValidPayload($cached)) {
             return (new User)->newFromBuilder($cached['attributes']);
@@ -56,7 +51,10 @@ class UserCacheManager
             $key,
             [
                 'version' => UserConstant::CACHE_PAYLOAD_VERSION,
-                'attributes' => $user->only(UserConstant::CACHEABLE_ATTRIBUTES),
+                'attributes' => Arr::only(
+                    $user->getAttributes(),
+                    UserConstant::CACHEABLE_ATTRIBUTES,
+                ),
             ],
             UserConstant::CACHE_TTL_SECONDS,
         );
@@ -64,9 +62,19 @@ class UserCacheManager
 
     private function isValidPayload(mixed $cached): bool
     {
-        return is_array($cached)
-            && ($cached['version'] ?? null) === UserConstant::CACHE_PAYLOAD_VERSION
-            && isset($cached['attributes'])
-            && is_array($cached['attributes']);
+        if (! is_array($cached)
+            || ($cached['version'] ?? null) !== UserConstant::CACHE_PAYLOAD_VERSION
+            || ! isset($cached['attributes'])
+            || ! is_array($cached['attributes'])) {
+            return false;
+        }
+
+        foreach ($cached['attributes'] as $attribute) {
+            if (! is_scalar($attribute) && $attribute !== null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -6,7 +6,7 @@ final class UserConstant
 {
     public const CACHE_TTL_SECONDS = 300;
 
-    public const CACHE_PAYLOAD_VERSION = 1;
+    public const CACHE_PAYLOAD_VERSION = 2;
 
     public const CACHE_KEY_PATTERN = '[UserById][user_id:%d]';
 
