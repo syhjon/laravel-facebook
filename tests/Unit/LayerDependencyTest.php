@@ -13,9 +13,20 @@ class LayerDependencyTest extends TestCase
     {
         $rules = [
             'Http/Controllers' => [
+                'App\\Checkers\\',
+                'App\\CombinationManagers\\',
                 'App\\Repositories\\',
+                'App\\ServiceManagers\\',
+                'App\\Services\\',
                 'App\\Validators\\',
                 'App\\Models\\',
+            ],
+            'Containers' => [
+                'App\\Containers\\',
+                'App\\Models\\',
+                'App\\Repositories\\',
+                'App\\Services\\',
+                'App\\Validators\\',
             ],
             'Services' => [
                 'App\\Http\\Controllers\\',

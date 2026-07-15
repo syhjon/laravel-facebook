@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\CacheManagers\UserCacheManager;
+use App\Containers\Authentication\WebAuthenticationContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Http\Controllers\AuthController;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Services\UserService;
@@ -20,6 +22,17 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertInstanceOf(
             UserRepository::class,
             $this->app->make(UserRepositoryInterface::class),
+        );
+    }
+
+    public function test_auth_controller_receives_the_web_authentication_container_contextually(): void
+    {
+        $controller = $this->app->make(AuthController::class);
+        $property = new \ReflectionProperty($controller, 'authenticationContainer');
+
+        $this->assertInstanceOf(
+            WebAuthenticationContainer::class,
+            $property->getValue($controller),
         );
     }
 

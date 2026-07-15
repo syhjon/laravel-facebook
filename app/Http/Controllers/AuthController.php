@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Checkers\AuthenticationChecker;
-use App\CombinationManagers\AuthenticationPageCombinationManager;
-use App\ServiceManagers\AuthenticationServiceManager;
+use App\Contracts\Containers\AuthenticationContainerInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,9 +12,7 @@ use Illuminate\View\View;
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly AuthenticationChecker $authenticationChecker,
-        private readonly AuthenticationServiceManager $authenticationServiceManager,
-        private readonly AuthenticationPageCombinationManager $pageCombinationManager,
+        private readonly AuthenticationContainerInterface $authenticationContainer,
     ) {}
 
     public function showLogin(): View
@@ -36,10 +32,8 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
-        $validated = $this->authenticationChecker->checkRegistration($request->all());
-
         DB::transaction(
-            fn () => $this->authenticationServiceManager->register($validated),
+            fn () => $this->authenticationContainer->register($request->all()),
         );
 
         $request->session()->regenerate();
@@ -52,9 +46,7 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $validated = $this->authenticationChecker->checkLogin($request->all());
-
-        $this->authenticationServiceManager->authenticate($validated, $request->ip());
+        $this->authenticationContainer->login($request->all(), $request->ip());
         $request->session()->regenerate();
 
         return response()->json([
@@ -65,7 +57,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $this->authenticationServiceManager->logout();
+        $this->authenticationContainer->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -76,7 +68,7 @@ class AuthController extends Controller
     private function render(string $page, ?int $userId = null): View
     {
         return view('app', [
-            'appData' => $this->pageCombinationManager->build($page, $userId),
+            'appData' => $this->authenticationContainer->page($page, $userId),
         ]);
     }
 }

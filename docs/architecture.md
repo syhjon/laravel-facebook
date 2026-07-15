@@ -7,39 +7,45 @@
 ```text
 HTTP Request
   └─ Controller（流程與 Transaction）
-      ├─ Checker
-      │   └─ Validator
-      ├─ ServiceManager
-      │   └─ Service
-      │       ├─ Repository
-      │       │   ├─ CacheManager
-      │       │   └─ Model
-      │       │       └─ Presenter
-      │       └─ Combination
-      └─ CombinationManager
-          ├─ Service
-          └─ Combination
+      └─ Container Contract
+          └─ Container（由 Contextual Binding 決定實作）
+              ├─ Checker
+              │   └─ Validator
+              ├─ ServiceManager
+              │   └─ Service
+              │       ├─ Repository
+              │       │   ├─ CacheManager
+              │       │   └─ Model
+              │       │       └─ Presenter
+              │       └─ Combination
+              └─ CombinationManager
+                  ├─ Service
+                  └─ Combination
 ```
 
 目前會員系統的實際流程：
 
 ```text
 AuthController
-  ├─ AuthenticationChecker → UserValidator
-  ├─ AuthenticationServiceManager
-  │   ├─ AuthenticationService
-  │   └─ UserService → UserRepository → User Model → UserPresenter
-  │                         └─ UserCacheManager
-  └─ AuthenticationPageCombinationManager
-      ├─ UserService
-      └─ AuthenticationPageCombination
+  └─ AuthenticationContainerInterface
+      └─ WebAuthenticationContainer（AppServiceProvider 決定）
+          ├─ AuthenticationChecker → UserValidator
+          ├─ AuthenticationServiceManager
+          │   ├─ AuthenticationService
+          │   └─ UserService → UserRepository → User Model → UserPresenter
+          │                         └─ UserCacheManager
+          └─ AuthenticationPageCombinationManager
+              ├─ UserService
+              └─ AuthenticationPageCombination
 ```
 
 ## 目錄職責
 
 | 目錄 | 職責 |
 | --- | --- |
-| `app/Http/Controllers` | 控制 HTTP 流程與資料交易，不放商業邏輯 |
+| `app/Http/Controllers` | 控制 HTTP/session 與資料交易，只依賴 Container Contract |
+| `app/Contracts/Containers` | 定義特定入口可執行的應用操作 |
+| `app/Containers` | 作為 Controller 與應用層的邊界，調用 Service 前先由容器決定該入口的流程組合 |
 | `app/Checkers` | 依使用案例組合一或多個 Validator |
 | `app/Validators` | 驗證單一 Model 的欄位資料 |
 | `app/ServiceManagers` | 組合多個 Service 的商業流程 |
@@ -59,13 +65,21 @@ AuthController
 ## 存取限制
 
 1. 不得跨越兩個以上的控制層直接存取。
-2. Controller 不得直接存取 Repository、Validator 或 Model。
+2. Controller 只能依賴 Container Contract，不得直接存取 Checker、CombinationManager、ServiceManager、Service、Repository、Validator 或 Model。
 3. Service 不得直接查詢 Model，資料存取必須經過 Repository。
 4. 低階層不得反向存取高階層。
 5. 同類型類別不得互相呼叫，避免循環依賴。
 6. CacheManager、Constant、Support、ExceptionCode 為獨立結構，可被各層使用。
 7. 寫入資料的 transaction 由 Controller 統一控制。
-8. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
+8. Container 可組合 Checker、ServiceManager 與 CombinationManager，但不得跳層直接存取 Service、Repository、Validator 或 Model。
+9. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
+
+## Container 選擇規範
+
+- Controller 建構子只注入 `app/Contracts/Containers` 下的介面。
+- `AppServiceProvider` 使用 Laravel contextual binding，依 Controller 決定 Container 實作；因此在任何 Service 被調用前，入口容器已經確定。
+- Container 負責使用案例的編排，不處理 HTTP response、session 或 transaction。
+- 例如未來新增 OAuth 入口時，可建立 `OauthAuthenticationContainer`，並將對應 Controller 綁定到該實作，不必修改既有 Service。
 
 上述主要限制由 `tests/Unit/LayerDependencyTest.php` 自動檢查。
 
@@ -97,5 +111,6 @@ AuthController
 5. 衍生欄位放入 `PostPresenter` 或 `PostCombination`。
 6. 跨來源頁面資料由 `PostCombinationManager` 組合。
 7. 複雜查詢需要快取時建立 `PostCacheManager`。
-8. Controller 僅串接上述流程並控制 transaction。
-9. 增加行為測試與分層限制測試。
+8. 建立 `PostContainerInterface` 與入口所需的 Container 實作，並於 `AppServiceProvider` 設定 contextual binding。
+9. Controller 僅依賴 `PostContainerInterface`，並控制 HTTP/session 與 transaction。
+10. 增加行為測試與分層限制測試。
