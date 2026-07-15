@@ -50,5 +50,31 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertSame('王', $profile['initials']);
         $this->assertSame('member@example.com', $profile['email']);
         $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
+        $this->assertSame(1, Cache::get($cacheKey)['version']);
+        $this->assertArrayNotHasKey('password', Cache::get($cacheKey)['attributes']);
+        $this->assertArrayNotHasKey('remember_token', Cache::get($cacheKey)['attributes']);
+    }
+
+    public function test_user_cache_recovers_from_an_incomplete_serialized_object(): void
+    {
+        $user = User::factory()->create();
+        $cacheManager = $this->app->make(UserCacheManager::class);
+        $cacheKey = $cacheManager->key($user->getKey());
+
+        Cache::put(
+            $cacheKey,
+            unserialize('O:17:"MissingCacheClass":0:{}'),
+            60,
+        );
+
+        $resolved = $cacheManager->remember(
+            $user->getKey(),
+            fn (): User => $user,
+        );
+
+        $this->assertTrue($resolved->is($user));
+        $this->assertIsArray(Cache::get($cacheKey));
+        $this->assertSame($user->getKey(), Cache::get($cacheKey)['attributes']['id']);
     }
 }
