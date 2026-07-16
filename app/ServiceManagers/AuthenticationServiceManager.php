@@ -18,8 +18,8 @@ class AuthenticationServiceManager implements AuthenticationServiceManagerInterf
      */
     public function register(array $attributes): void
     {
-        $user = $this->userService->create($attributes);
-        $this->authenticationService->login($user);
+        $registeredUser = $this->userService->create($attributes);
+        $this->authenticationService->login($registeredUser);
     }
 
     /**

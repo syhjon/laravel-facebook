@@ -22,18 +22,18 @@ class AuthenticationService
      */
     public function authenticate(array $credentials, ?string $ipAddress): void
     {
-        $key = AuthenticationSupport::throttleKey($credentials['email'], $ipAddress);
+        $authenticationThrottleKey = AuthenticationSupport::throttleKey($credentials['email'], $ipAddress);
 
-        if (RateLimiter::tooManyAttempts($key, AuthenticationConstant::MAX_LOGIN_ATTEMPTS)) {
-            $seconds = RateLimiter::availableIn($key);
+        if (RateLimiter::tooManyAttempts($authenticationThrottleKey, AuthenticationConstant::MAX_LOGIN_ATTEMPTS)) {
+            $retryAfterSeconds = RateLimiter::availableIn($authenticationThrottleKey);
 
             throw new DomainValidationException(
-                ['email' => ["登入嘗試次數過多，請在 {$seconds} 秒後再試。"]],
+                ['email' => ["登入嘗試次數過多，請在 {$retryAfterSeconds} 秒後再試。"]],
                 AuthenticationExceptionCode::TOO_MANY_ATTEMPTS,
             );
         }
 
-        $authenticated = Auth::attempt(
+        $authenticationSucceeded = Auth::attempt(
             [
                 'email' => $credentials['email'],
                 'password' => $credentials['password'],
@@ -41,8 +41,8 @@ class AuthenticationService
             (bool) ($credentials['remember'] ?? false),
         );
 
-        if (! $authenticated) {
-            RateLimiter::hit($key, AuthenticationConstant::LOGIN_DECAY_SECONDS);
+        if (! $authenticationSucceeded) {
+            RateLimiter::hit($authenticationThrottleKey, AuthenticationConstant::LOGIN_DECAY_SECONDS);
 
             throw new DomainValidationException(
                 ['email' => ['Email 或密碼不正確。']],
@@ -50,7 +50,7 @@ class AuthenticationService
             );
         }
 
-        RateLimiter::clear($key);
+        RateLimiter::clear($authenticationThrottleKey);
     }
 
     public function logout(): void

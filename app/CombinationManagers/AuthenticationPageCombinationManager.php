@@ -17,8 +17,8 @@ class AuthenticationPageCombinationManager
      */
     public function build(string $page, ?int $userId = null): array
     {
-        $user = $userId ? $this->userService->profile($userId) : null;
+        $userProfile = $userId ? $this->userService->profile($userId) : null;
 
-        return $this->pageCombination->page($page, $user);
+        return $this->pageCombination->page($page, $userProfile);
     }
 }

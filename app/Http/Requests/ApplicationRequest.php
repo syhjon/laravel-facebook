@@ -14,10 +14,10 @@ class ApplicationRequest extends FormRequest
 
     public function authenticatedUser(): Authenticatable
     {
-        /** @var Authenticatable $user */
-        $user = $this->user();
+        /** @var Authenticatable $authenticatedUser */
+        $authenticatedUser = $this->user();
 
-        return $user;
+        return $authenticatedUser;
     }
 
     public function userId(): int

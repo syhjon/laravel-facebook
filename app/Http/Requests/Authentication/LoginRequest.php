@@ -18,13 +18,13 @@ class LoginRequest extends ApiRequest
     /** @return array{email: string, password: string, remember: bool} */
     public function payload(): array
     {
-        /** @var array{email: string, password: string, remember?: bool} $validated */
-        $validated = $this->safe()->only(['email', 'password', 'remember']);
+        /** @var array{email: string, password: string, remember?: bool} $validatedCredentials */
+        $validatedCredentials = $this->safe()->only(['email', 'password', 'remember']);
 
         return [
-            'email' => $validated['email'],
-            'password' => $validated['password'],
-            'remember' => (bool) ($validated['remember'] ?? false),
+            'email' => $validatedCredentials['email'],
+            'password' => $validatedCredentials['password'],
+            'remember' => (bool) ($validatedCredentials['remember'] ?? false),
         ];
     }
 

@@ -105,7 +105,7 @@ FeedController
 ## 常數與環境設定規範
 
 - 產品名稱、品牌色、route/page 識別、驗證限制、cache key／TTL／payload version 等會隨產品版本調整的參數，統一定義於 `app/Constants`。
-- PHP 參數由對應 Constant 直接引用；Vue 與 CSS 所需參數由 Combination 傳入 `appData`，不得在前端重複寫死。
+- PHP 參數由對應 Constant 直接引用；Vue 與 CSS 所需參數由 Combination 傳入 `applicationData`，不得在前端重複寫死。
 - 資料庫連線、外部服務憑證、主機 URL 等會隨部署環境變動或涉及機密的設定，維持於 `.env` 與 `config`，不得放入 Constants。
 - 可翻譯的使用者文案應放入語系檔；Constants 不負責取代 Laravel localization。
 - `ProjectConstant` 管理專案名稱與品牌視覺參數，`AuthenticationConstant` 管理登入／註冊流程參數，`UserConstant` 管理會員與快取參數。
@@ -125,6 +125,16 @@ FeedController
 - 例如未來新增 OAuth 入口時，可建立 `OauthAuthenticationContainer`，並將對應 Controller 綁定到該實作，不必修改既有 Service。
 
 上述主要限制由 `tests/Unit/LayerDependencyTest.php` 自動檢查。
+
+## 命名規範
+
+- Controller action 的 FormRequest 參數名稱必須由具體型別完整衍生，例如 `FeedIndexRequest $feedIndexRequest`、`StorePostRequest $storePostRequest`；函式內必須持續使用相同名稱。
+- 基礎的 Laravel `Request` 使用 `$httpRequest`，專案自訂的 `ApplicationRequest` 使用 `$applicationRequest`，不得退回無法辨識具體用途的 `$request`。
+- 函式、參數、屬性與區域變數必須描述領域與用途，例如 `$authenticationThrottleKey`、`$cachedUserPayload`、`$feedResponsePayload`；不得使用 `$tmp`、`$obj`、`$val`、`$result` 等需要讀者猜測的名稱。
+- 布林值使用可直接判讀的狀態名稱，例如 `$authenticationSucceeded`、`$feedRequestInProgress`、`$isLoginPage`。
+- 標準技術縮寫 `HTTP`、`URL`、`API`、`ID`、`IP`、`CSRF` 可保留，但必須附帶領域上下文，例如 `$postId`、`$feedEndpointUrl`、`$ipAddress`。
+- JSON 欄位、資料庫欄位與既有 HTTP 契約不因內部重新命名而任意變更；例如對外的 `data`、`meta`、`user_id` 保持相容，內部變數則使用 `$responseData`、`$metadata`、`$userId`。
+- `tests/Unit/LayerDependencyTest.php` 會檢查 Request 型別與參數名稱，防止具體 FormRequest 再次被命名為 `$request`。
 
 ## Taichi API 參考架構採用原則
 

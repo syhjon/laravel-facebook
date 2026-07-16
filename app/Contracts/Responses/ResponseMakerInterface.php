@@ -8,24 +8,24 @@ use Illuminate\Http\JsonResponse;
 interface ResponseMakerInterface
 {
     /**
-     * @param  array<string, mixed>  $additional
+     * @param  array<string, mixed>  $additionalResponseData
      */
-    public function make(
-        mixed $data = null,
+    public function createResponse(
+        mixed $responseData = null,
         int $httpCode = HttpCodeConstant::OK,
         ?string $message = null,
-        array $additional = [],
+        array $additionalResponseData = [],
     ): JsonResponse;
 
     /**
-     * @param  array<string, mixed>  $meta
-     * @param  array<string, mixed>  $additional
+     * @param  array<string, mixed>  $metadata
+     * @param  array<string, mixed>  $additionalResponseData
      */
-    public function makeWithMeta(
-        mixed $data = null,
+    public function createResponseWithMetadata(
+        mixed $responseData = null,
         int $httpCode = HttpCodeConstant::OK,
         ?string $message = null,
-        array $meta = [],
-        array $additional = [],
+        array $metadata = [],
+        array $additionalResponseData = [],
     ): JsonResponse;
 }

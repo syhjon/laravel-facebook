@@ -10,45 +10,45 @@ use Illuminate\Support\Facades\Cache;
 
 class UserCacheManager
 {
-    public function key(int $userId): string
+    public function cacheKeyForUser(int $userId): string
     {
         return sprintf(UserConstant::CACHE_KEY_PATTERN, $userId);
     }
 
     /**
-     * @param  Closure(): ?User  $resolver
+     * @param  Closure(): ?User  $userResolver
      */
-    public function remember(int $userId, Closure $resolver): ?User
+    public function rememberUser(int $userId, Closure $userResolver): ?User
     {
-        $key = $this->key($userId);
-        $cached = Cache::get($key);
+        $userCacheKey = $this->cacheKeyForUser($userId);
+        $cachedUserPayload = Cache::get($userCacheKey);
 
-        if ($this->isValidPayload($cached)) {
-            return (new User)->newFromBuilder($cached['attributes']);
+        if ($this->isValidUserCachePayload($cachedUserPayload)) {
+            return (new User)->newFromBuilder($cachedUserPayload['attributes']);
         }
 
-        if ($cached !== null) {
-            Cache::forget($key);
+        if ($cachedUserPayload !== null) {
+            Cache::forget($userCacheKey);
         }
 
-        $user = $resolver();
+        $resolvedUser = $userResolver();
 
-        if ($user) {
-            $this->store($key, $user);
+        if ($resolvedUser) {
+            $this->storeUserCachePayload($userCacheKey, $resolvedUser);
         }
 
-        return $user;
+        return $resolvedUser;
     }
 
-    public function forget(int $userId): void
+    public function forgetUser(int $userId): void
     {
-        Cache::forget($this->key($userId));
+        Cache::forget($this->cacheKeyForUser($userId));
     }
 
-    private function store(string $key, User $user): void
+    private function storeUserCachePayload(string $userCacheKey, User $user): void
     {
         Cache::put(
-            $key,
+            $userCacheKey,
             [
                 'version' => UserConstant::CACHE_PAYLOAD_VERSION,
                 'attributes' => Arr::only(
@@ -60,17 +60,17 @@ class UserCacheManager
         );
     }
 
-    private function isValidPayload(mixed $cached): bool
+    private function isValidUserCachePayload(mixed $cachedUserPayload): bool
     {
-        if (! is_array($cached)
-            || ($cached['version'] ?? null) !== UserConstant::CACHE_PAYLOAD_VERSION
-            || ! isset($cached['attributes'])
-            || ! is_array($cached['attributes'])) {
+        if (! is_array($cachedUserPayload)
+            || ($cachedUserPayload['version'] ?? null) !== UserConstant::CACHE_PAYLOAD_VERSION
+            || ! isset($cachedUserPayload['attributes'])
+            || ! is_array($cachedUserPayload['attributes'])) {
             return false;
         }
 
-        foreach ($cached['attributes'] as $attribute) {
-            if (! is_scalar($attribute) && $attribute !== null) {
+        foreach ($cachedUserPayload['attributes'] as $cachedUserAttribute) {
+            if (! is_scalar($cachedUserAttribute) && $cachedUserAttribute !== null) {
                 return false;
             }
         }

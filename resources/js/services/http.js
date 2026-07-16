@@ -7,38 +7,42 @@ export class ApiError extends Error {
     }
 }
 
-export async function apiRequest(url, { method = 'GET', body = null, csrfToken = '' } = {}) {
-    const headers = { Accept: 'application/json' };
+export async function apiRequest(endpointUrl, { method = 'GET', requestBody = null, csrfToken = '' } = {}) {
+    const requestHeaders = { Accept: 'application/json' };
 
-    if (body !== null) {
-        headers['Content-Type'] = 'application/json';
+    if (requestBody !== null) {
+        requestHeaders['Content-Type'] = 'application/json';
     }
 
     if (csrfToken) {
-        headers['X-CSRF-TOKEN'] = csrfToken;
+        requestHeaders['X-CSRF-TOKEN'] = csrfToken;
     }
 
-    const response = await fetch(url, {
+    const httpResponse = await fetch(endpointUrl, {
         method,
         credentials: 'same-origin',
-        headers,
-        body: body === null ? null : JSON.stringify(body),
+        headers: requestHeaders,
+        body: requestBody === null ? null : JSON.stringify(requestBody),
     });
 
-    if (response.status === 401) {
-        window.location.assign(window.appData.routes.login);
-        throw new ApiError('登入已逾時，正在返回登入頁。', {}, response.status);
+    if (httpResponse.status === 401) {
+        window.location.assign(window.applicationData.routes.login);
+        throw new ApiError('登入已逾時，正在返回登入頁。', {}, httpResponse.status);
     }
 
-    const data = await response.json().catch(() => ({}));
+    const responsePayload = await httpResponse.json().catch(() => ({}));
 
-    if (!response.ok) {
-        throw new ApiError(data.message ?? '操作失敗，請稍後再試。', data.errors ?? {}, response.status);
+    if (!httpResponse.ok) {
+        throw new ApiError(
+            responsePayload.message ?? '操作失敗，請稍後再試。',
+            responsePayload.errors ?? {},
+            httpResponse.status,
+        );
     }
 
-    return data;
+    return responsePayload;
 }
 
-export function routeFor(pattern, postId) {
-    return pattern.replace('{postId}', String(postId));
+export function buildPostRoute(routePattern, postId) {
+    return routePattern.replace('{postId}', String(postId));
 }

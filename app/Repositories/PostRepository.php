@@ -46,12 +46,12 @@ class PostRepository implements PostRepositoryInterface
 
     public function toggleLike(int $postId, int $userId): bool
     {
-        $query = $this->postLikeModel->newQuery()
+        $existingPostLikeQuery = $this->postLikeModel->newQuery()
             ->where('post_id', $postId)
             ->where('user_id', $userId);
 
-        if ($query->exists()) {
-            $query->delete();
+        if ($existingPostLikeQuery->exists()) {
+            $existingPostLikeQuery->delete();
 
             return false;
         }
@@ -78,13 +78,13 @@ class PostRepository implements PostRepositoryInterface
         return $this->postModel->newQuery()
             ->with([
                 'user:id,name',
-                'comments' => fn ($query) => $query
+                'comments' => fn ($commentQuery) => $commentQuery
                     ->with('user:id,name')
                     ->oldest('id'),
             ])
             ->withCount(['likes', 'comments'])
             ->withExists([
-                'likes as liked_by_viewer' => fn ($query) => $query->where('user_id', $viewerId),
+                'likes as liked_by_viewer' => fn ($postLikeQuery) => $postLikeQuery->where('user_id', $viewerId),
             ]);
     }
 }

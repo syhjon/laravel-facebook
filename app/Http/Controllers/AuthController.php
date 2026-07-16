@@ -24,61 +24,61 @@ class AuthController extends Controller
 
     public function showLogin(): View
     {
-        return $this->render(AuthenticationConstant::PAGE_LOGIN);
+        return $this->renderAuthenticationPage(AuthenticationConstant::PAGE_LOGIN);
     }
 
     public function showRegister(): View
     {
-        return $this->render(AuthenticationConstant::PAGE_REGISTER);
+        return $this->renderAuthenticationPage(AuthenticationConstant::PAGE_REGISTER);
     }
 
-    public function dashboard(ApplicationRequest $request): View
+    public function dashboard(ApplicationRequest $applicationRequest): View
     {
-        return $this->render(AuthenticationConstant::PAGE_DASHBOARD, $request->userId());
+        return $this->renderAuthenticationPage(AuthenticationConstant::PAGE_DASHBOARD, $applicationRequest->userId());
     }
 
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $registerRequest): JsonResponse
     {
-        $this->authenticationContainer->register($request->payload());
+        $this->authenticationContainer->register($registerRequest->payload());
 
-        $request->session()->regenerate();
+        $registerRequest->session()->regenerate();
 
-        return $this->responseMaker->make(
+        return $this->responseMaker->createResponse(
             httpCode: HttpCodeConstant::CREATED,
             message: '註冊成功',
-            additional: [
+            additionalResponseData: [
                 'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
             ],
         );
     }
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(LoginRequest $loginRequest): JsonResponse
     {
-        $this->authenticationContainer->login($request->payload(), $request->ip());
-        $request->session()->regenerate();
+        $this->authenticationContainer->login($loginRequest->payload(), $loginRequest->ip());
+        $loginRequest->session()->regenerate();
 
-        return $this->responseMaker->make(
+        return $this->responseMaker->createResponse(
             message: '登入成功',
-            additional: [
+            additionalResponseData: [
                 'redirect' => route(AuthenticationConstant::ROUTE_DASHBOARD),
             ],
         );
     }
 
-    public function logout(ApplicationRequest $request): RedirectResponse
+    public function logout(ApplicationRequest $applicationRequest): RedirectResponse
     {
         $this->authenticationContainer->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $applicationRequest->session()->invalidate();
+        $applicationRequest->session()->regenerateToken();
 
         return redirect()->route(AuthenticationConstant::ROUTE_LOGIN);
     }
 
-    private function render(string $page, ?int $userId = null): View
+    private function renderAuthenticationPage(string $pageName, ?int $userId = null): View
     {
         return view('app', [
-            'appData' => $this->authenticationContainer->page($page, $userId),
+            'applicationData' => $this->authenticationContainer->page($pageName, $userId),
         ]);
     }
 }

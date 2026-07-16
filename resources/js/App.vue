@@ -4,15 +4,17 @@ import AuthPage from './components/auth/AuthPage.vue';
 import FeedPage from './components/feed/FeedPage.vue';
 import AppNavbar from './components/layout/AppNavbar.vue';
 
-const app = window.appData;
+const applicationData = window.applicationData;
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-const isAuthPage = computed(() => [app.pages.login, app.pages.register].includes(app.page));
+const isAuthenticationPage = computed(() =>
+    [applicationData.pages.login, applicationData.pages.register].includes(applicationData.page),
+);
 </script>
 
 <template>
     <div class="app-shell">
-        <AppNavbar :app="app" :csrf-token="csrfToken" />
-        <AuthPage v-if="isAuthPage" :app="app" :csrf-token="csrfToken" />
-        <FeedPage v-else :app="app" :csrf-token="csrfToken" />
+        <AppNavbar :application-data="applicationData" :csrf-token="csrfToken" />
+        <AuthPage v-if="isAuthenticationPage" :application-data="applicationData" :csrf-token="csrfToken" />
+        <FeedPage v-else :application-data="applicationData" :csrf-token="csrfToken" />
     </div>
 </template>

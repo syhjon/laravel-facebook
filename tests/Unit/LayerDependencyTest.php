@@ -111,6 +111,34 @@ class LayerDependencyTest extends TestCase
         }
     }
 
+    public function test_request_parameters_use_names_derived_from_their_concrete_types(): void
+    {
+        foreach ($this->phpFiles(app_path()) as $file) {
+            $contents = file_get_contents($file);
+
+            preg_match_all(
+                '/\b([A-Z][A-Za-z0-9]*Request)\s+\$([A-Za-z][A-Za-z0-9]*)/',
+                $contents,
+                $requestParameters,
+                PREG_SET_ORDER,
+            );
+
+            foreach ($requestParameters as $requestParameter) {
+                $requestType = $requestParameter[1];
+                $actualVariableName = $requestParameter[2];
+                $expectedVariableName = $requestType === 'Request'
+                    ? 'httpRequest'
+                    : lcfirst($requestType);
+
+                $this->assertSame(
+                    $expectedVariableName,
+                    $actualVariableName,
+                    "{$file} 的 {$requestType} 參數必須命名為 \${$expectedVariableName}",
+                );
+            }
+        }
+    }
+
     public function test_containers_delegate_transactions_and_service_manager_resolution(): void
     {
         foreach ($this->phpFiles(app_path('Containers')) as $file) {

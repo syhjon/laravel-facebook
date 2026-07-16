@@ -18,10 +18,10 @@ class RegisterRequest extends ApiRequest
     /** @return array{name: string, email: string, password: string} */
     public function payload(): array
     {
-        /** @var array{name: string, email: string, password: string} $payload */
-        $payload = $this->safe()->only(['name', 'email', 'password']);
+        /** @var array{name: string, email: string, password: string} $validatedRegistrationData */
+        $validatedRegistrationData = $this->safe()->only(['name', 'email', 'password']);
 
-        return $payload;
+        return $validatedRegistrationData;
     }
 
     protected function prepareForValidation(): void

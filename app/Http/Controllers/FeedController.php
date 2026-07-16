@@ -20,52 +20,52 @@ class FeedController extends Controller
         parent::__construct($responseMaker);
     }
 
-    public function index(FeedIndexRequest $request): JsonResponse
+    public function index(FeedIndexRequest $feedIndexRequest): JsonResponse
     {
-        $feed = $this->feedContainer->feed(
-            $request->cursor(),
-            $request->userId(),
+        $feedResult = $this->feedContainer->feed(
+            $feedIndexRequest->cursor(),
+            $feedIndexRequest->userId(),
         );
 
-        return $this->responseMaker->makeWithMeta(
-            data: $feed['data'],
-            meta: $feed['meta'],
+        return $this->responseMaker->createResponseWithMetadata(
+            responseData: $feedResult['data'],
+            metadata: $feedResult['meta'],
         );
     }
 
-    public function store(StorePostRequest $request): JsonResponse
+    public function store(StorePostRequest $storePostRequest): JsonResponse
     {
-        $post = $this->feedContainer->create(
-            $request->payload(),
-            $request->userId(),
+        $createdPost = $this->feedContainer->create(
+            $storePostRequest->payload(),
+            $storePostRequest->userId(),
         );
 
-        return $this->responseMaker->make(
-            data: $post,
+        return $this->responseMaker->createResponse(
+            responseData: $createdPost,
             httpCode: HttpCodeConstant::CREATED,
         );
     }
 
-    public function toggleLike(ApplicationRequest $request, int $postId): JsonResponse
+    public function toggleLike(ApplicationRequest $applicationRequest, int $postId): JsonResponse
     {
-        $post = $this->feedContainer->toggleLike(
+        $updatedPost = $this->feedContainer->toggleLike(
             $postId,
-            $request->userId(),
+            $applicationRequest->userId(),
         );
 
-        return $this->responseMaker->make(data: $post);
+        return $this->responseMaker->createResponse(responseData: $updatedPost);
     }
 
-    public function storeComment(StoreCommentRequest $request, int $postId): JsonResponse
+    public function storeComment(StoreCommentRequest $storeCommentRequest, int $postId): JsonResponse
     {
-        $post = $this->feedContainer->comment(
-            $request->body(),
+        $updatedPost = $this->feedContainer->comment(
+            $storeCommentRequest->body(),
             $postId,
-            $request->userId(),
+            $storeCommentRequest->userId(),
         );
 
-        return $this->responseMaker->make(
-            data: $post,
+        return $this->responseMaker->createResponse(
+            responseData: $updatedPost,
             httpCode: HttpCodeConstant::CREATED,
         );
     }

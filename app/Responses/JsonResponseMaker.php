@@ -15,34 +15,34 @@ class JsonResponseMaker implements ResponseMakerInterface
         private readonly ResponseFactory $responseFactory,
     ) {}
 
-    public function make(
-        mixed $data = null,
+    public function createResponse(
+        mixed $responseData = null,
         int $httpCode = HttpCodeConstant::OK,
         ?string $message = null,
-        array $additional = [],
+        array $additionalResponseData = [],
     ): JsonResponse {
-        return $this->json([
-            ...$additional,
+        return $this->createJsonResponse([
+            ...$additionalResponseData,
             'message' => $message ?: HttpCodeConstant::defaultMessage($httpCode),
-            'data' => $data,
-            'duration' => $this->duration(),
+            'data' => $responseData,
+            'duration' => $this->calculateRequestDuration(),
         ], $httpCode);
     }
 
-    public function makeWithMeta(
-        mixed $data = null,
+    public function createResponseWithMetadata(
+        mixed $responseData = null,
         int $httpCode = HttpCodeConstant::OK,
         ?string $message = null,
-        array $meta = [],
-        array $additional = [],
+        array $metadata = [],
+        array $additionalResponseData = [],
     ): JsonResponse {
-        return $this->json([
-            ...$additional,
+        return $this->createJsonResponse([
+            ...$additionalResponseData,
             'message' => $message ?: HttpCodeConstant::defaultMessage($httpCode),
-            'data' => $data,
-            'meta' => $meta,
-            'duration' => $this->duration(),
-            'datetime' => CarbonImmutable::createFromTimestamp($this->requestStartedAt())
+            'data' => $responseData,
+            'meta' => $metadata,
+            'duration' => $this->calculateRequestDuration(),
+            'datetime' => CarbonImmutable::createFromTimestamp($this->requestStartTimestamp())
                 ->format(ResponseConstant::DATETIME_FORMAT),
         ], $httpCode);
     }
@@ -50,20 +50,20 @@ class JsonResponseMaker implements ResponseMakerInterface
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function json(array $payload, int $httpCode): JsonResponse
+    private function createJsonResponse(array $responsePayload, int $httpCode): JsonResponse
     {
-        return $this->responseFactory->json($payload, $httpCode);
+        return $this->responseFactory->json($responsePayload, $httpCode);
     }
 
-    private function duration(): float
+    private function calculateRequestDuration(): float
     {
         return round(
-            microtime(true) - $this->requestStartedAt(),
+            microtime(true) - $this->requestStartTimestamp(),
             ResponseConstant::DURATION_PRECISION,
         );
     }
 
-    private function requestStartedAt(): float
+    private function requestStartTimestamp(): float
     {
         if (defined('LARAVEL_START')) {
             return (float) constant('LARAVEL_START');

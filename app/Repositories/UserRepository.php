@@ -9,23 +9,23 @@ use App\Models\User;
 class UserRepository implements UserRepositoryInterface
 {
     public function __construct(
-        private readonly User $model,
-        private readonly UserCacheManager $cacheManager,
+        private readonly User $userModel,
+        private readonly UserCacheManager $userCacheManager,
     ) {}
 
     public function create(array $attributes): User
     {
-        $user = $this->model->newQuery()->create($attributes);
-        $this->cacheManager->forget($user->getKey());
+        $createdUser = $this->userModel->newQuery()->create($attributes);
+        $this->userCacheManager->forgetUser($createdUser->getKey());
 
-        return $user;
+        return $createdUser;
     }
 
     public function find(int $userId): ?User
     {
-        return $this->cacheManager->remember(
+        return $this->userCacheManager->rememberUser(
             $userId,
-            fn (): ?User => $this->model->newQuery()->find($userId),
+            fn (): ?User => $this->userModel->newQuery()->find($userId),
         );
     }
 }

@@ -22,9 +22,9 @@ class PostService
     /** @param array{body: string} $attributes */
     public function create(int $userId, array $attributes): Post
     {
-        $post = $this->postRepository->create($userId, $attributes);
+        $createdPost = $this->postRepository->create($userId, $attributes);
 
-        return $this->findForFeed($post->getKey(), $userId);
+        return $this->findForFeed($createdPost->getKey(), $userId);
     }
 
     public function toggleLike(int $postId, int $userId): Post
@@ -45,15 +45,15 @@ class PostService
 
     private function findForFeed(int $postId, int $viewerId): Post
     {
-        $post = $this->postRepository->findForFeed($postId, $viewerId);
+        $requestedPost = $this->postRepository->findForFeed($postId, $viewerId);
 
-        if (! $post) {
+        if (! $requestedPost) {
             throw new DomainNotFoundException(
                 PostExceptionCode::POST_NOT_FOUND,
                 '找不到這篇貼文。',
             );
         }
 
-        return $post;
+        return $requestedPost;
     }
 }

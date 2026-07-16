@@ -17,10 +17,10 @@ class StorePostRequest extends ApiRequest
     /** @return array{body: string} */
     public function payload(): array
     {
-        /** @var array{body: string} $payload */
-        $payload = $this->safe()->only(['body']);
+        /** @var array{body: string} $validatedPostData */
+        $validatedPostData = $this->safe()->only(['body']);
 
-        return $payload;
+        return $validatedPostData;
     }
 
     protected function validationExceptionCode(): int

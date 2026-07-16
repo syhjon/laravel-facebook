@@ -16,11 +16,11 @@ class FeedIndexRequest extends ApiRequest
 
     public function cursor(): ?string
     {
-        /** @var array{cursor?: string|null} $validated */
-        $validated = $this->safe()->only(['cursor']);
-        $cursor = $validated['cursor'] ?? null;
+        /** @var array{cursor?: string|null} $validatedFeedQuery */
+        $validatedFeedQuery = $this->safe()->only(['cursor']);
+        $paginationCursor = $validatedFeedQuery['cursor'] ?? null;
 
-        return is_string($cursor) && $cursor !== '' ? $cursor : null;
+        return is_string($paginationCursor) && $paginationCursor !== '' ? $paginationCursor : null;
     }
 
     protected function validationExceptionCode(): int

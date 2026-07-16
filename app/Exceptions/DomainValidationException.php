@@ -21,12 +21,12 @@ class DomainValidationException extends RuntimeException
         parent::__construct($message, $exceptionCode);
     }
 
-    public function render(Request $request): JsonResponse
+    public function render(Request $httpRequest): JsonResponse
     {
-        return resolve(ResponseMakerInterface::class)->make(
+        return resolve(ResponseMakerInterface::class)->createResponse(
             httpCode: HttpCodeConstant::UNPROCESSABLE_ENTITY,
             message: $this->getMessage(),
-            additional: [
+            additionalResponseData: [
                 'code' => $this->exceptionCode,
                 'errors' => $this->errors,
             ],

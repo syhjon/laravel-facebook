@@ -17,12 +17,12 @@ class DomainNotFoundException extends RuntimeException
         parent::__construct($message, $exceptionCode);
     }
 
-    public function render(Request $request): JsonResponse
+    public function render(Request $httpRequest): JsonResponse
     {
-        return resolve(ResponseMakerInterface::class)->make(
+        return resolve(ResponseMakerInterface::class)->createResponse(
             httpCode: HttpCodeConstant::NOT_FOUND,
             message: $this->getMessage(),
-            additional: ['code' => $this->exceptionCode],
+            additionalResponseData: ['code' => $this->exceptionCode],
         );
     }
 }

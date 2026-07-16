@@ -28,15 +28,15 @@ class UserService
      */
     public function profile(int $userId): array
     {
-        $user = $this->userRepository->find($userId);
+        $requestedUser = $this->userRepository->find($userId);
 
-        if (! $user) {
+        if (! $requestedUser) {
             throw new DomainNotFoundException(
                 UserExceptionCode::USER_NOT_FOUND,
                 '找不到會員資料。',
             );
         }
 
-        return $this->userCombination->profile($user);
+        return $this->userCombination->profile($requestedUser);
     }
 }

@@ -9,12 +9,12 @@
 
         <style>
             :root {
-                --brand-primary: {{ $appData['project']['theme']['primary'] }};
-                --brand-primary-rgb: {{ $appData['project']['theme']['primary_rgb'] }};
-                --brand-primary-hover: {{ $appData['project']['theme']['primary_hover'] }};
-                --brand-primary-active: {{ $appData['project']['theme']['primary_active'] }};
-                --brand-primary-text: {{ $appData['project']['theme']['primary_text'] }};
-                --brand-primary-subtle: {{ $appData['project']['theme']['primary_subtle'] }};
+                --brand-primary: {{ $applicationData['project']['theme']['primary'] }};
+                --brand-primary-rgb: {{ $applicationData['project']['theme']['primary_rgb'] }};
+                --brand-primary-hover: {{ $applicationData['project']['theme']['primary_hover'] }};
+                --brand-primary-active: {{ $applicationData['project']['theme']['primary_active'] }};
+                --brand-primary-text: {{ $applicationData['project']['theme']['primary_text'] }};
+                --brand-primary-subtle: {{ $applicationData['project']['theme']['primary_subtle'] }};
             }
         </style>
 
@@ -24,7 +24,7 @@
         <div id="app"></div>
 
         <script>
-            window.appData = {{ Illuminate\Support\Js::from($appData) }};
+            window.applicationData = {{ Illuminate\Support\Js::from($applicationData) }};
         </script>
     </body>
 </html>

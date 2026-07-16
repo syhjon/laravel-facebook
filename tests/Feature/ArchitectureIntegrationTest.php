@@ -67,11 +67,11 @@ class ArchitectureIntegrationTest extends TestCase
 
     public function test_layer_specific_service_providers_are_loaded(): void
     {
-        $providers = $this->app->getLoadedProviders();
+        $loadedServiceProviders = $this->app->getLoadedProviders();
 
-        $this->assertArrayHasKey(RepositoryServiceProvider::class, $providers);
-        $this->assertArrayHasKey(ApplicationServiceProvider::class, $providers);
-        $this->assertArrayHasKey(EntryContextServiceProvider::class, $providers);
+        $this->assertArrayHasKey(RepositoryServiceProvider::class, $loadedServiceProviders);
+        $this->assertArrayHasKey(ApplicationServiceProvider::class, $loadedServiceProviders);
+        $this->assertArrayHasKey(EntryContextServiceProvider::class, $loadedServiceProviders);
     }
 
     public function test_transaction_manager_rolls_back_failed_work(): void
@@ -93,55 +93,55 @@ class ArchitectureIntegrationTest extends TestCase
 
     public function test_auth_controller_receives_the_web_authentication_container_contextually(): void
     {
-        $controller = $this->app->make(AuthController::class);
-        $property = new \ReflectionProperty($controller, 'authenticationContainer');
-        $responseMaker = new \ReflectionProperty($controller, 'responseMaker');
+        $authenticationController = $this->app->make(AuthController::class);
+        $authenticationContainerProperty = new \ReflectionProperty($authenticationController, 'authenticationContainer');
+        $responseMakerProperty = new \ReflectionProperty($authenticationController, 'responseMaker');
 
         $this->assertInstanceOf(
             WebAuthenticationContainer::class,
-            $property->getValue($controller),
+            $authenticationContainerProperty->getValue($authenticationController),
         );
         $this->assertInstanceOf(
             ResponseMakerInterface::class,
-            $responseMaker->getValue($controller),
+            $responseMakerProperty->getValue($authenticationController),
         );
     }
 
     public function test_feed_controller_receives_the_web_feed_container_contextually(): void
     {
-        $controller = $this->app->make(FeedController::class);
-        $property = new \ReflectionProperty($controller, 'feedContainer');
-        $responseMaker = new \ReflectionProperty($controller, 'responseMaker');
+        $feedController = $this->app->make(FeedController::class);
+        $feedContainerProperty = new \ReflectionProperty($feedController, 'feedContainer');
+        $responseMakerProperty = new \ReflectionProperty($feedController, 'responseMaker');
 
         $this->assertInstanceOf(
             WebFeedContainer::class,
-            $property->getValue($controller),
+            $feedContainerProperty->getValue($feedController),
         );
         $this->assertInstanceOf(
             ResponseMakerInterface::class,
-            $responseMaker->getValue($controller),
+            $responseMakerProperty->getValue($feedController),
         );
     }
 
     public function test_user_service_reads_presented_user_data_through_repository_cache(): void
     {
-        $user = User::factory()->create([
+        $createdUser = User::factory()->create([
             'name' => '王小明',
             'email' => 'member@example.com',
         ]);
 
-        $profile = $this->app->make(UserService::class)->profile($user->getKey());
-        $cacheKey = $this->app->make(UserCacheManager::class)->key($user->getKey());
+        $userProfile = $this->app->make(UserService::class)->profile($createdUser->getKey());
+        $userCacheKey = $this->app->make(UserCacheManager::class)->cacheKeyForUser($createdUser->getKey());
 
-        $this->assertSame($user->getKey(), $profile['id']);
-        $this->assertSame('王', $profile['initials']);
-        $this->assertSame('member@example.com', $profile['email']);
-        $this->assertTrue(Cache::has($cacheKey));
-        $this->assertIsArray(Cache::get($cacheKey));
-        $this->assertSame(UserConstant::CACHE_PAYLOAD_VERSION, Cache::get($cacheKey)['version']);
-        $this->assertArrayNotHasKey('password', Cache::get($cacheKey)['attributes']);
-        $this->assertArrayNotHasKey('remember_token', Cache::get($cacheKey)['attributes']);
-        $this->assertIsString(Cache::get($cacheKey)['attributes']['created_at']);
+        $this->assertSame($createdUser->getKey(), $userProfile['id']);
+        $this->assertSame('王', $userProfile['initials']);
+        $this->assertSame('member@example.com', $userProfile['email']);
+        $this->assertTrue(Cache::has($userCacheKey));
+        $this->assertIsArray(Cache::get($userCacheKey));
+        $this->assertSame(UserConstant::CACHE_PAYLOAD_VERSION, Cache::get($userCacheKey)['version']);
+        $this->assertArrayNotHasKey('password', Cache::get($userCacheKey)['attributes']);
+        $this->assertArrayNotHasKey('remember_token', Cache::get($userCacheKey)['attributes']);
+        $this->assertIsString(Cache::get($userCacheKey)['attributes']['created_at']);
     }
 
     public function test_project_name_is_sourced_from_project_constants(): void
@@ -151,48 +151,48 @@ class ArchitectureIntegrationTest extends TestCase
 
     public function test_user_cache_recovers_from_an_incomplete_serialized_object(): void
     {
-        $user = User::factory()->create();
-        $cacheManager = $this->app->make(UserCacheManager::class);
-        $cacheKey = $cacheManager->key($user->getKey());
+        $createdUser = User::factory()->create();
+        $userCacheManager = $this->app->make(UserCacheManager::class);
+        $userCacheKey = $userCacheManager->cacheKeyForUser($createdUser->getKey());
 
         Cache::put(
-            $cacheKey,
+            $userCacheKey,
             unserialize('O:17:"MissingCacheClass":0:{}'),
             60,
         );
 
-        $resolved = $cacheManager->remember(
-            $user->getKey(),
-            fn (): User => $user,
+        $resolvedUser = $userCacheManager->rememberUser(
+            $createdUser->getKey(),
+            fn (): User => $createdUser,
         );
 
-        $this->assertTrue($resolved->is($user));
-        $this->assertIsArray(Cache::get($cacheKey));
-        $this->assertSame($user->getKey(), Cache::get($cacheKey)['attributes']['id']);
+        $this->assertTrue($resolvedUser->is($createdUser));
+        $this->assertIsArray(Cache::get($userCacheKey));
+        $this->assertSame($createdUser->getKey(), Cache::get($userCacheKey)['attributes']['id']);
     }
 
     public function test_user_cache_recovers_when_a_cached_attribute_is_an_incomplete_object(): void
     {
-        $user = User::factory()->create();
-        $cacheManager = $this->app->make(UserCacheManager::class);
-        $cacheKey = $cacheManager->key($user->getKey());
+        $createdUser = User::factory()->create();
+        $userCacheManager = $this->app->make(UserCacheManager::class);
+        $userCacheKey = $userCacheManager->cacheKeyForUser($createdUser->getKey());
 
-        Cache::put($cacheKey, [
+        Cache::put($userCacheKey, [
             'version' => UserConstant::CACHE_PAYLOAD_VERSION,
             'attributes' => [
-                'id' => $user->getKey(),
-                'name' => $user->name,
-                'email' => $user->email,
+                'id' => $createdUser->getKey(),
+                'name' => $createdUser->name,
+                'email' => $createdUser->email,
                 'created_at' => unserialize('O:17:"MissingCacheClass":0:{}'),
             ],
         ], 60);
 
-        $resolved = $cacheManager->remember(
-            $user->getKey(),
-            fn (): User => $user,
+        $resolvedUser = $userCacheManager->rememberUser(
+            $createdUser->getKey(),
+            fn (): User => $createdUser,
         );
 
-        $this->assertTrue($resolved->is($user));
-        $this->assertIsString(Cache::get($cacheKey)['attributes']['created_at']);
+        $this->assertTrue($resolvedUser->is($createdUser));
+        $this->assertIsString(Cache::get($userCacheKey)['attributes']['created_at']);
     }
 }
