@@ -100,6 +100,104 @@ a {
     }
 }
 
+.user-menu {
+    &__trigger {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.35rem 0.7rem;
+        border: 0;
+        border-radius: 0.85rem;
+        color: #243536;
+        background: transparent;
+        font-size: 0.9rem;
+        font-weight: 700;
+        transition:
+            color 0.15s ease,
+            background-color 0.15s ease;
+
+        &:hover,
+        &:focus-visible,
+        &[aria-expanded='true'] {
+            color: #0b4f50;
+            background: var(--brand-primary-subtle);
+        }
+
+        &:focus-visible {
+            outline: 3px solid rgba(var(--brand-primary-rgb), 0.25);
+            outline-offset: 2px;
+        }
+
+        &::after {
+            margin-left: 0.1rem;
+            transition: transform 0.15s ease;
+        }
+
+        &[aria-expanded='true']::after {
+            transform: rotate(180deg);
+        }
+    }
+
+    &__name {
+        max-width: 10rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__dropdown {
+        min-width: 13rem;
+        margin-top: 0.55rem !important;
+        padding: 0.45rem;
+        border: 1px solid rgb(16 55 56 / 9%);
+        border-radius: 0.9rem;
+        box-shadow: 0 0.8rem 2.2rem rgb(16 55 56 / 14%);
+    }
+
+    &__item {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        gap: 0.75rem;
+        border-radius: 0.65rem;
+        color: #334344;
+        font-size: 0.92rem;
+        font-weight: 600;
+
+        svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            fill: none;
+            stroke: currentcolor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1.8;
+        }
+
+        &:hover,
+        &:focus {
+            color: #0b4f50;
+            background: var(--brand-primary-subtle);
+        }
+
+        &--danger {
+            color: #b42318;
+
+            &:hover,
+            &:focus {
+                color: #912018;
+                background: #fff0ee;
+            }
+        }
+    }
+
+    .dropdown-divider {
+        margin: 0.4rem 0;
+        border-color: rgb(16 55 56 / 9%);
+    }
+}
+
 .brand-mark {
     display: inline-grid;
     width: 2.15rem;
