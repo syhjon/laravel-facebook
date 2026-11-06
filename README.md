@@ -4,6 +4,20 @@
 
 專案依分層職責設計，沿用既有目錄與命名空間；開發規範請參閱 [專案架構準則](docs/architecture.md) 與 [通用分層架構設計與重構指南](docs/infrastructure-refactoring-guide.md)。
 
+## 本地開發
+
+開始開發或檢視成果前，請同時啟動 Laravel 本地伺服器與 Vite 開發伺服器，並各自保持執行：
+
+```bash
+# 終端機 1：Laravel 本地伺服器
+php artisan serve
+
+# 終端機 2：Vite 前端開發伺服器
+npm run dev
+```
+
+啟動後，開啟 Laravel 顯示的網址（通常是 `http://127.0.0.1:8000`）即可檢視專案成果。
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
