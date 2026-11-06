@@ -2,8 +2,10 @@
 
 use App\Constants\AuthenticationConstant;
 use App\Constants\PostConstant;
+use App\Constants\ProfileConstant;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +29,14 @@ Route::middleware('auth')->group(function () {
         ->name(AuthenticationConstant::ROUTE_DASHBOARD);
     Route::post(AuthenticationConstant::URI_LOGOUT, [AuthController::class, 'logout'])
         ->name(AuthenticationConstant::ROUTE_LOGOUT);
+    Route::get(ProfileConstant::URI_PROFILE_PAGE, [ProfileController::class, 'page'])
+        ->name(ProfileConstant::ROUTE_PROFILE_PAGE);
+    Route::get(ProfileConstant::URI_PROFILE_API, [ProfileController::class, 'show'])
+        ->name(ProfileConstant::ROUTE_PROFILE_SHOW);
+    Route::patch(ProfileConstant::URI_PROFILE_API, [ProfileController::class, 'update'])
+        ->name(ProfileConstant::ROUTE_PROFILE_UPDATE);
+    Route::post(ProfileConstant::URI_PROFILE_IMAGE_API, [ProfileController::class, 'updateImage'])
+        ->name(ProfileConstant::ROUTE_PROFILE_IMAGE_UPDATE);
     Route::get(PostConstant::URI_FEED, [FeedController::class, 'index'])
         ->name(PostConstant::ROUTE_FEED);
     Route::post(PostConstant::URI_POSTS, [FeedController::class, 'store'])

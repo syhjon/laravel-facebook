@@ -2,7 +2,7 @@
 
 namespace App\Containers\Authentication;
 
-use App\CombinationManagers\AuthenticationPageCombinationManager;
+use App\CombinationManagers\ApplicationPageCombinationManager;
 use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
 use App\Contracts\Transactions\TransactionManagerInterface;
@@ -11,13 +11,13 @@ class WebAuthenticationContainer implements AuthenticationContainerInterface
 {
     public function __construct(
         private readonly AuthenticationServiceManagerInterface $authenticationServiceManager,
-        private readonly AuthenticationPageCombinationManager $pageCombinationManager,
+        private readonly ApplicationPageCombinationManager $applicationPageCombinationManager,
         private readonly TransactionManagerInterface $transactionManager,
     ) {}
 
-    public function page(string $page, ?int $userId = null): array
+    public function page(string $pageName, ?int $userId = null): array
     {
-        return $this->pageCombinationManager->build($page, $userId);
+        return $this->applicationPageCombinationManager->buildPageData($pageName, $userId);
     }
 
     public function register(array $attributes): void

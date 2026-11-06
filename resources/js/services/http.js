@@ -9,8 +9,9 @@ export class ApiError extends Error {
 
 export async function apiRequest(endpointUrl, { method = 'GET', requestBody = null, csrfToken = '' } = {}) {
     const requestHeaders = { Accept: 'application/json' };
+    const requestContainsFormData = requestBody instanceof FormData;
 
-    if (requestBody !== null) {
+    if (requestBody !== null && !requestContainsFormData) {
         requestHeaders['Content-Type'] = 'application/json';
     }
 
@@ -22,7 +23,7 @@ export async function apiRequest(endpointUrl, { method = 'GET', requestBody = nu
         method,
         credentials: 'same-origin',
         headers: requestHeaders,
-        body: requestBody === null ? null : JSON.stringify(requestBody),
+        body: requestBody === null || requestContainsFormData ? requestBody : JSON.stringify(requestBody),
     });
 
     if (httpResponse.status === 401) {

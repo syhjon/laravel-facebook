@@ -7,7 +7,11 @@ defineProps({ comments: { type: Array, required: true } });
 <template>
     <div v-if="comments.length" class="comment-list">
         <div v-for="comment in comments" :key="comment.id" class="comment-item d-flex gap-2">
-            <UserAvatar :initials="comment.author.initials" size="sm" />
+            <UserAvatar
+                :initials="comment.author.initials"
+                :image-url="comment.author.profile_image_url"
+                size="sm"
+            />
             <div class="comment-bubble">
                 <div class="d-flex align-items-baseline justify-content-between gap-3">
                     <span class="small fw-bold">{{ comment.author.name }}</span>

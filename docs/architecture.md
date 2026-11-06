@@ -39,9 +39,23 @@ AuthController
           │   ├─ AuthenticationService
           │   └─ UserService → UserRepository → User Model → UserPresenter
           │                         └─ UserCacheManager
-          └─ AuthenticationPageCombinationManager
+          └─ ApplicationPageCombinationManager
               ├─ UserService
-              └─ AuthenticationPageCombination
+              └─ ApplicationPageCombination
+```
+
+個人檔案流程：
+
+```text
+ProfileController
+  ├─ ApplicationRequest／UpdateProfileRequest
+  │   └─ ProfileChecker → UserValidator
+  └─ ProfileContainerInterface
+      └─ WebProfileContainer（EntryContextServiceProvider 決定）
+          ├─ UserProfileServiceManagerInterface → UserProfileServiceManager
+          │   └─ UserService → UserRepository → UserCacheManager → User Model
+          ├─ TransactionManagerInterface（更新資料時使用）
+          └─ ApplicationPageCombinationManager（組合頁面初始資料）
 ```
 
 貼文牆流程：
@@ -68,6 +82,7 @@ FeedController
 | `app/Contracts/Containers` | 定義特定入口可執行的應用操作 |
 | `app/Contracts/Responses` | 定義 HTTP 回應製造介面，隔離 Controller 與 JSON 實作 |
 | `app/Contracts/ServiceManagers` | 定義入口 Container 可使用的商業流程介面 |
+| `app/Contracts/Storage` | 定義檔案儲存抽象，隔離商業流程與本機／雲端磁碟實作 |
 | `app/Contracts/Transactions` | 定義 transaction 執行邊界，隔離應用流程與資料庫實作 |
 | `app/Responses` | 實作統一的 message、data、meta、duration 與 datetime 回應格式 |
 | `app/Containers` | 作為 Controller 與應用層的邊界，決定入口流程組合並控制寫入 transaction |
@@ -88,6 +103,7 @@ FeedController
 | `app/ExceptionCodes` | 集中管理領域錯誤代碼 |
 | `app/Exceptions` | 領域例外與一致的 HTTP 回應格式 |
 | `app/Providers` | 依 Repository、Application infrastructure、Entry Context 分開註冊 container bindings |
+| `app/Storage` | 實作照片等檔案的儲存、刪除與公開 URL 產生 |
 
 ## 存取限制
 
@@ -163,6 +179,27 @@ FeedController
 | `1301xxx` | 貼文、按讚與回覆流程 |
 
 新增錯誤時，應先在對應的 `ExceptionCodes` 類別定義，再由領域例外輸出 `message`、`code` 與欄位 `errors`。
+
+## 個人檔案流程
+
+| 方法 | 路徑 | 用途 |
+| --- | --- | --- |
+| `GET` | `/profile` | 顯示登入會員的個人檔案頁 |
+| `GET` | `/api/profile` | 取得登入會員的個人檔案資料 |
+| `PATCH` | `/api/profile` | 更新登入會員的姓名與 Email |
+| `POST` | `/api/profile/image` | 上傳或替換登入會員的個人照片 |
+
+- 三條路由都必須套用 `auth` middleware；更新 API 同時受 `web` middleware 的 CSRF 保護。
+- `UpdateProfileRequest` 只輸出 `name` 與 `email`，會員 ID 一律取自 authenticated user，不接受前端指定。
+- Email 唯一性驗證只能用系統取得的會員 ID 排除本人，不得把 request input 傳入 `Rule::ignore()`。
+- 更新流程由 `ProfileContainerInterface` 控制 transaction，並經 `UserProfileServiceManagerInterface`、`UserService`、`UserRepositoryInterface` 寫入。
+- Repository 更新成功後必須清除 `UserCacheManager` 對應的會員快取，避免頁面繼續顯示舊資料。
+- 個人照片目前由 `ProfileImageStorageInterface` 的 `LocalProfileImageStorage` 實作儲存於 `public` disk；資料庫只保存相對路徑，頁面只接收公開 URL。
+- 照片路徑格式為 `profile-images/{userId}/{generatedFileName}`，允許 JPG、JPEG、PNG、WebP，上限 5 MB、最大 2048×2048；SVG 不開放上傳。
+- 照片公開 URL 固定使用同網域相對路徑 `/storage/profile-images/{userId}/{generatedFileName}`，避免本機以 `localhost` 或 `127.0.0.1` 啟動時受 `APP_URL` 主機名稱與連接埠差異影響。
+- 個人檔案選取照片後會立即上傳；導覽列、發文框、貼文作者、留言作者及留言輸入區一律使用 API 回傳的 `profile_image_url`，沒有照片時才顯示姓名縮寫。
+- 替換照片時必須在新檔與資料庫更新成功後刪除舊檔；寫入失敗則清除新檔，避免孤兒檔案。
+- 本機環境必須執行 `php artisan storage:link`，讓 `/storage/*` 公開 URL 指向 `storage/app/public`。
 
 ## 新功能擴充步驟
 

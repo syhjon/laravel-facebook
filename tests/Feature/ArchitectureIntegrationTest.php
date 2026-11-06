@@ -7,13 +7,17 @@ use App\Constants\ProjectConstant;
 use App\Constants\UserConstant;
 use App\Containers\Authentication\WebAuthenticationContainer;
 use App\Containers\Feed\WebFeedContainer;
+use App\Containers\Profile\WebProfileContainer;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
 use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
 use App\Contracts\ServiceManagers\PostServiceManagerInterface;
+use App\Contracts\ServiceManagers\UserProfileServiceManagerInterface;
+use App\Contracts\Storage\ProfileImageStorageInterface;
 use App\Contracts\Transactions\TransactionManagerInterface;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\ProfileController;
 use App\Models\User;
 use App\Providers\ApplicationServiceProvider;
 use App\Providers\EntryContextServiceProvider;
@@ -22,7 +26,9 @@ use App\Repositories\UserRepository;
 use App\Responses\JsonResponseMaker;
 use App\ServiceManagers\AuthenticationServiceManager;
 use App\ServiceManagers\PostServiceManager;
+use App\ServiceManagers\UserProfileServiceManager;
 use App\Services\UserService;
+use App\Storage\LocalProfileImageStorage;
 use App\Transactions\DatabaseTransactionManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -60,8 +66,16 @@ class ArchitectureIntegrationTest extends TestCase
             $this->app->make(PostServiceManagerInterface::class),
         );
         $this->assertInstanceOf(
+            UserProfileServiceManager::class,
+            $this->app->make(UserProfileServiceManagerInterface::class),
+        );
+        $this->assertInstanceOf(
             DatabaseTransactionManager::class,
             $this->app->make(TransactionManagerInterface::class),
+        );
+        $this->assertInstanceOf(
+            LocalProfileImageStorage::class,
+            $this->app->make(ProfileImageStorageInterface::class),
         );
     }
 
@@ -120,6 +134,22 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertInstanceOf(
             ResponseMakerInterface::class,
             $responseMakerProperty->getValue($feedController),
+        );
+    }
+
+    public function test_profile_controller_receives_the_web_profile_container_contextually(): void
+    {
+        $profileController = $this->app->make(ProfileController::class);
+        $profileContainerProperty = new \ReflectionProperty($profileController, 'profileContainer');
+        $responseMakerProperty = new \ReflectionProperty($profileController, 'responseMaker');
+
+        $this->assertInstanceOf(
+            WebProfileContainer::class,
+            $profileContainerProperty->getValue($profileController),
+        );
+        $this->assertInstanceOf(
+            ResponseMakerInterface::class,
+            $responseMakerProperty->getValue($profileController),
         );
     }
 

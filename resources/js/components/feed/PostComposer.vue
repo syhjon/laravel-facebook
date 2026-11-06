@@ -39,7 +39,7 @@ async function submitPost() {
 <template>
     <section class="surface-card post-composer">
         <div class="d-flex gap-3">
-            <UserAvatar :initials="user.initials" />
+            <UserAvatar :initials="user.initials" :image-url="user.profile_image_url" />
             <div class="flex-grow-1">
                 <textarea
                     v-model="postBody"

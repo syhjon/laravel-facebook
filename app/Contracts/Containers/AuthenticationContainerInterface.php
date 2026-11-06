@@ -7,7 +7,7 @@ interface AuthenticationContainerInterface
     /**
      * @return array<string, mixed>
      */
-    public function page(string $page, ?int $userId = null): array;
+    public function page(string $pageName, ?int $userId = null): array;
 
     /**
      * @param  array{name: string, email: string, password: string}  $attributes

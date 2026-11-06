@@ -83,6 +83,41 @@ class FeedTest extends TestCase
         $this->assertTrue($firstIds->first() > $firstIds->last());
     }
 
+    public function test_feed_includes_profile_images_for_post_and_comment_authors(): void
+    {
+        $postAuthor = User::factory()->create();
+        $postAuthorProfileImagePath = sprintf(
+            'profile-images/%d/post-author.jpg',
+            $postAuthor->getKey(),
+        );
+        $postAuthor->update(['profile_image_path' => $postAuthorProfileImagePath]);
+
+        $commentAuthor = User::factory()->create();
+        $commentAuthorProfileImagePath = sprintf(
+            'profile-images/%d/comment-author.png',
+            $commentAuthor->getKey(),
+        );
+        $commentAuthor->update(['profile_image_path' => $commentAuthorProfileImagePath]);
+
+        $post = Post::factory()->for($postAuthor)->create();
+        $post->comments()->create([
+            'user_id' => $commentAuthor->getKey(),
+            'body' => '使用大頭貼回覆文章。',
+        ]);
+
+        $this->actingAs($postAuthor)
+            ->getJson(route(PostConstant::ROUTE_FEED))
+            ->assertOk()
+            ->assertJsonPath(
+                'data.0.author.profile_image_url',
+                '/storage/'.$postAuthorProfileImagePath,
+            )
+            ->assertJsonPath(
+                'data.0.comments.0.author.profile_image_url',
+                '/storage/'.$commentAuthorProfileImagePath,
+            );
+    }
+
     public function test_feed_cursor_is_validated_before_reaching_the_container(): void
     {
         $user = User::factory()->create();

@@ -11,7 +11,8 @@ class PostServiceManager implements PostServiceManagerInterface
     public function __construct(
         private readonly PostService $postService,
         private readonly PostCombination $postCombination,
-    ) {}
+    ) {
+    }
 
     public function feed(?string $cursor, int $viewerId): array
     {

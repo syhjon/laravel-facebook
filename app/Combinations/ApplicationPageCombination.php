@@ -4,15 +4,16 @@ namespace App\Combinations;
 
 use App\Constants\AuthenticationConstant;
 use App\Constants\PostConstant;
+use App\Constants\ProfileConstant;
 use App\Constants\ProjectConstant;
 
-class AuthenticationPageCombination
+class ApplicationPageCombination
 {
     /**
-     * @param  array<string, mixed>|null  $user
+     * @param  array<string, mixed>|null  $userProfile
      * @return array<string, mixed>
      */
-    public function page(string $page, ?array $user): array
+    public function page(string $pageName, ?array $userProfile): array
     {
         return [
             'project' => [
@@ -38,14 +39,19 @@ class AuthenticationPageCombination
                 'login' => AuthenticationConstant::PAGE_LOGIN,
                 'register' => AuthenticationConstant::PAGE_REGISTER,
                 'dashboard' => AuthenticationConstant::PAGE_DASHBOARD,
+                'profile' => ProfileConstant::PAGE_PROFILE,
             ],
-            'page' => $page,
-            'user' => $user,
+            'page' => $pageName,
+            'user' => $userProfile,
             'routes' => [
                 'login' => route(AuthenticationConstant::ROUTE_LOGIN),
                 'register' => route(AuthenticationConstant::ROUTE_REGISTER),
                 'dashboard' => route(AuthenticationConstant::ROUTE_DASHBOARD),
                 'logout' => route(AuthenticationConstant::ROUTE_LOGOUT),
+                'profile' => route(ProfileConstant::ROUTE_PROFILE_PAGE),
+                'profile_show' => route(ProfileConstant::ROUTE_PROFILE_SHOW),
+                'profile_update' => route(ProfileConstant::ROUTE_PROFILE_UPDATE),
+                'profile_image_update' => route(ProfileConstant::ROUTE_PROFILE_IMAGE_UPDATE),
                 'feed' => route(PostConstant::ROUTE_FEED),
                 'post_create' => route(PostConstant::ROUTE_POST_CREATE),
                 'post_like_pattern' => PostConstant::URI_POST_LIKE,

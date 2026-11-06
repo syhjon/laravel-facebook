@@ -2,6 +2,7 @@
 
 namespace App\Combinations;
 
+use App\Contracts\Storage\ProfileImageStorageInterface;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Supports\UserSupport;
@@ -9,6 +10,10 @@ use Illuminate\Pagination\CursorPaginator;
 
 class PostCombination
 {
+    public function __construct(
+        private readonly ProfileImageStorageInterface $profileImageStorage,
+    ) {}
+
     /** @return array{data: array<int, array<string, mixed>>, meta: array{next_cursor: string|null, has_more: bool}} */
     public function feed(CursorPaginator $paginator): array
     {
@@ -35,6 +40,7 @@ class PostCombination
                 'id' => $post->user->getKey(),
                 'name' => $post->user->name,
                 'initials' => UserSupport::initials($post->user->name),
+                'profile_image_url' => $this->profileImageStorage->publicUrl($post->user->profile_image_path),
             ],
             'liked' => (bool) $post->liked_by_viewer,
             'likes_count' => (int) $post->likes_count,
@@ -57,6 +63,7 @@ class PostCombination
                 'id' => $comment->user->getKey(),
                 'name' => $comment->user->name,
                 'initials' => UserSupport::initials($comment->user->name),
+                'profile_image_url' => $this->profileImageStorage->publicUrl($comment->user->profile_image_path),
             ],
         ];
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Requests\ApplicationRequest;
 use App\Http\Requests\Authentication\RegisterRequest;
 use App\Http\Requests\Feed\StorePostRequest;
+use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Redirector;
@@ -49,6 +50,27 @@ class RequestBoundaryTest extends TestCase
         $this->assertSame(['body' => '這是一篇經過驗證的貼文。'], $storePostRequest->payload());
         $this->assertSame($authenticatedUser->getKey(), $storePostRequest->userId());
         $this->assertArrayNotHasKey('user_id', $storePostRequest->payload());
+    }
+
+    public function test_profile_request_only_exposes_editable_profile_fields(): void
+    {
+        $authenticatedUser = User::factory()->create(['email' => 'member@example.com']);
+        $updateProfileRequest = UpdateProfileRequest::create('/api/profile', 'PATCH', [
+            'name' => '更新姓名',
+            'email' => ' UPDATED@EXAMPLE.COM ',
+            'user_id' => 999999,
+            'password' => 'should-not-change',
+        ]);
+        $updateProfileRequest->setUserResolver(fn (): User => $authenticatedUser);
+
+        $this->validateRequest($updateProfileRequest);
+
+        $this->assertSame([
+            'name' => '更新姓名',
+            'email' => 'updated@example.com',
+        ], $updateProfileRequest->payload());
+        $this->assertArrayNotHasKey('user_id', $updateProfileRequest->payload());
+        $this->assertArrayNotHasKey('password', $updateProfileRequest->payload());
     }
 
     private function validateRequest(ApplicationRequest $applicationRequest): void

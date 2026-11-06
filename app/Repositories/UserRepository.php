@@ -28,4 +28,34 @@ class UserRepository implements UserRepositoryInterface
             fn (): ?User => $this->userModel->newQuery()->find($userId),
         );
     }
+
+    public function updateProfile(int $userId, array $profileAttributes): ?User
+    {
+        $userToUpdate = $this->userModel->newQuery()->find($userId);
+
+        if (! $userToUpdate) {
+            return null;
+        }
+
+        $userToUpdate->fill($profileAttributes);
+        $userToUpdate->save();
+        $this->userCacheManager->forgetUser($userId);
+
+        return $userToUpdate->refresh();
+    }
+
+    public function updateProfileImagePath(int $userId, string $profileImagePath): ?User
+    {
+        $userToUpdate = $this->userModel->newQuery()->find($userId);
+
+        if (! $userToUpdate) {
+            return null;
+        }
+
+        $userToUpdate->profile_image_path = $profileImagePath;
+        $userToUpdate->save();
+        $this->userCacheManager->forgetUser($userId);
+
+        return $userToUpdate->refresh();
+    }
 }

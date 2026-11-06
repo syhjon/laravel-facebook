@@ -77,9 +77,9 @@ class PostRepository implements PostRepositoryInterface
     {
         return $this->postModel->newQuery()
             ->with([
-                'user:id,name',
+                'user:id,name,profile_image_path',
                 'comments' => fn ($commentQuery) => $commentQuery
-                    ->with('user:id,name')
+                    ->with('user:id,name,profile_image_path')
                     ->oldest('id'),
             ])
             ->withCount(['likes', 'comments'])

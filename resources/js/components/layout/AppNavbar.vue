@@ -24,18 +24,22 @@ defineProps({
                     aria-expanded="false"
                     aria-label="開啟會員選單"
                 >
-                    <UserAvatar :initials="applicationData.user.initials" size="sm" />
+                    <UserAvatar
+                        :initials="applicationData.user.initials"
+                        :image-url="applicationData.user.profile_image_url"
+                        size="sm"
+                    />
                     <span class="user-menu__name">{{ applicationData.user.name }}</span>
                 </button>
 
                 <ul class="dropdown-menu dropdown-menu-end user-menu__dropdown" aria-labelledby="user-menu-trigger">
                     <li>
-                        <button class="dropdown-item user-menu__item" type="button">
+                        <a class="dropdown-item user-menu__item" :href="applicationData.routes.profile">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
                             </svg>
                             <span>個人檔案</span>
-                        </button>
+                        </a>
                     </li>
                     <li>
                         <button class="dropdown-item user-menu__item" type="button">

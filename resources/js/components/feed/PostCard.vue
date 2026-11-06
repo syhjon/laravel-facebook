@@ -61,7 +61,7 @@ async function submitPostComment() {
 <template>
     <article class="surface-card post-card">
         <header class="post-card__header d-flex gap-3">
-            <UserAvatar :initials="post.author.initials" />
+            <UserAvatar :initials="post.author.initials" :image-url="post.author.profile_image_url" />
             <div class="min-w-0">
                 <h2 class="h6 fw-bold mb-1 text-truncate">{{ post.author.name }}</h2>
                 <time class="small text-secondary">{{ post.created_at }}</time>
@@ -97,7 +97,7 @@ async function submitPostComment() {
         <section v-if="showComments" class="post-comments">
             <CommentList :comments="post.comments" />
             <form class="comment-form d-flex gap-2" @submit.prevent="submitPostComment">
-                <UserAvatar :initials="currentUser.initials" size="sm" />
+                <UserAvatar :initials="currentUser.initials" :image-url="currentUser.profile_image_url" size="sm" />
                 <div class="comment-form__field flex-grow-1 d-flex align-items-center">
                     <input
                         v-model="commentBody"
