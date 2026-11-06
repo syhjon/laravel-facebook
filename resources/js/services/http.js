@@ -31,7 +31,14 @@ export async function apiRequest(endpointUrl, { method = 'GET', requestBody = nu
         throw new ApiError('登入已逾時，正在返回登入頁。', {}, httpResponse.status);
     }
 
-    const responsePayload = await httpResponse.json().catch(() => ({}));
+    if (httpResponse.redirected) {
+        window.location.assign(httpResponse.url);
+        throw new ApiError('正在重新導向，請稍候。', {}, httpResponse.status);
+    }
+
+    const responsePayload = await httpResponse.json().catch(() => {
+        throw new ApiError('伺服器回應格式不正確，請重新整理頁面後再試。', {}, httpResponse.status);
+    });
 
     if (!httpResponse.ok) {
         throw new ApiError(

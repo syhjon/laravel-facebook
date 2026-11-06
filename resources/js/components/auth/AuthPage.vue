@@ -49,7 +49,7 @@ async function submitAuthenticationForm() {
             requestBody: authenticationPayload,
             csrfToken: componentProperties.csrfToken,
         });
-        window.location.assign(authenticationResponsePayload.redirect);
+        window.location.assign(authenticationResponsePayload.redirect || componentProperties.applicationData.routes.dashboard);
     } catch (error) {
         validationErrors.value = error.errors ?? {};
         authenticationErrorMessage.value = error.message ?? '目前無法連線到伺服器。';

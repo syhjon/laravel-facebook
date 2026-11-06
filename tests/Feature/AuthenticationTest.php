@@ -34,6 +34,36 @@ class AuthenticationTest extends TestCase
             ->assertRedirect(route(AuthenticationConstant::ROUTE_LOGIN));
     }
 
+    public function test_authenticated_login_submission_returns_a_json_dashboard_redirect(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson(route(AuthenticationConstant::ROUTE_LOGIN), [])
+            ->assertOk()
+            ->assertJsonPath('redirect', route(AuthenticationConstant::ROUTE_DASHBOARD))
+            ->assertJsonStructure(['message', 'data', 'duration']);
+    }
+
+    public function test_authenticated_registration_submission_returns_a_json_dashboard_redirect(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson(route(AuthenticationConstant::ROUTE_REGISTER), [])
+            ->assertOk()
+            ->assertJsonPath('redirect', route(AuthenticationConstant::ROUTE_DASHBOARD));
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_authenticated_users_are_redirected_from_authentication_pages(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route(AuthenticationConstant::ROUTE_LOGIN))
+            ->assertRedirect(route(AuthenticationConstant::ROUTE_DASHBOARD));
+
+        $this->get(route(AuthenticationConstant::ROUTE_REGISTER))
+            ->assertRedirect(route(AuthenticationConstant::ROUTE_DASHBOARD));
+    }
+
     public function test_user_can_register(): void
     {
         $response = $this->postJson(route(AuthenticationConstant::ROUTE_REGISTER), [
