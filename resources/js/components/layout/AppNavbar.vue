@@ -11,7 +11,7 @@ defineProps({
     <nav class="app-navbar navbar border-bottom bg-white">
         <div class="container app-navbar__inner">
             <a class="navbar-brand d-flex align-items-center gap-2 fw-bold mb-0" :href="applicationData.routes.dashboard">
-                <span class="brand-mark">W</span>
+                <span class="brand-mark">{{ applicationData.project.name.charAt(0) }}</span>
                 {{ applicationData.project.name }}
             </a>
 

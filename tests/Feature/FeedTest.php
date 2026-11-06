@@ -24,18 +24,18 @@ class FeedTest extends TestCase
 
         $this->actingAs($user)
             ->postJson(route(PostConstant::ROUTE_POST_CREATE), [
-                'body' => '今天開始使用 WeTalk，和大家分享第一篇貼文。',
+                'body' => '今天開始使用 CrowdTalk，和大家分享第一篇貼文。',
             ])
             ->assertCreated()
             ->assertJsonPath('message', 'Created')
-            ->assertJsonPath('data.body', '今天開始使用 WeTalk，和大家分享第一篇貼文。')
+            ->assertJsonPath('data.body', '今天開始使用 CrowdTalk，和大家分享第一篇貼文。')
             ->assertJsonPath('data.author.id', $user->getKey())
             ->assertJsonPath('data.likes_count', 0)
             ->assertJsonPath('data.comments_count', 0);
 
         $this->assertDatabaseHas('posts', [
             'user_id' => $user->getKey(),
-            'body' => '今天開始使用 WeTalk，和大家分享第一篇貼文。',
+            'body' => '今天開始使用 CrowdTalk，和大家分享第一篇貼文。',
         ]);
     }
 
@@ -53,6 +53,8 @@ class FeedTest extends TestCase
                 'duration',
                 'errors' => ['body'],
             ]);
+
+        $this->assertDatabaseCount('posts', 0);
     }
 
     public function test_feed_uses_ten_item_cursor_pages_without_duplicates(): void
@@ -186,5 +188,24 @@ class FeedTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('code', PostExceptionCode::COMMENT_DATA_INVALID)
             ->assertJsonStructure(['errors' => ['body']]);
+
+        $this->assertDatabaseCount('comments', 0);
+    }
+
+    public function test_missing_posts_preserve_not_found_errors_without_creating_likes_or_comments(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)
+            ->postJson(route(PostConstant::ROUTE_POST_LIKE, ['postId' => 999999]))
+            ->assertNotFound()
+            ->assertJsonPath('code', PostExceptionCode::POST_NOT_FOUND)
+            ->assertJsonPath('message', '找不到這篇貼文。');
+
+        $this->postJson(route(PostConstant::ROUTE_POST_COMMENT, ['postId' => 999999]), ['body' => '找不到貼文的留言。'])
+            ->assertNotFound()
+            ->assertJsonPath('code', PostExceptionCode::POST_NOT_FOUND);
+
+        $this->assertDatabaseCount('post_likes', 0);
+        $this->assertDatabaseCount('comments', 0);
     }
 }

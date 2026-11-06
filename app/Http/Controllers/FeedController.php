@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Constants\HttpCodeConstant;
-use App\Contracts\Containers\FeedContainerInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
 use App\Http\Requests\ApplicationRequest;
 use App\Http\Requests\Feed\FeedIndexRequest;
 use App\Http\Requests\Feed\StoreCommentRequest;
 use App\Http\Requests\Feed\StorePostRequest;
+use App\ServiceManagers\PostServiceManager;
 use Illuminate\Http\JsonResponse;
 
 class FeedController extends Controller
 {
     public function __construct(
-        private readonly FeedContainerInterface $feedContainer,
+        private readonly PostServiceManager $feedContainer,
         ResponseMakerInterface $responseMaker,
     ) {
         parent::__construct($responseMaker);
@@ -36,8 +36,8 @@ class FeedController extends Controller
     public function store(StorePostRequest $storePostRequest): JsonResponse
     {
         $createdPost = $this->feedContainer->create(
-            $storePostRequest->payload(),
             $storePostRequest->userId(),
+            $storePostRequest->payload(),
         );
 
         return $this->responseMaker->createResponse(
@@ -59,9 +59,9 @@ class FeedController extends Controller
     public function storeComment(StoreCommentRequest $storeCommentRequest, int $postId): JsonResponse
     {
         $updatedPost = $this->feedContainer->comment(
-            $storeCommentRequest->body(),
             $postId,
             $storeCommentRequest->userId(),
+            $storeCommentRequest->body(),
         );
 
         return $this->responseMaker->createResponse(

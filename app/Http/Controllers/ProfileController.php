@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Constants\ProfileConstant;
-use App\Contracts\Containers\ProfileContainerInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
 use App\Http\Requests\ApplicationRequest;
 use App\Http\Requests\Profile\UpdateProfileImageRequest;
 use App\Http\Requests\Profile\UpdateProfileRequest;
+use App\ServiceManagers\UserProfileServiceManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
     public function __construct(
-        private readonly ProfileContainerInterface $profileContainer,
+        private readonly UserProfileServiceManager $profileContainer,
         ResponseMakerInterface $responseMaker,
     ) {
         parent::__construct($responseMaker);

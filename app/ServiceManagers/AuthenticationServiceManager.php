@@ -2,24 +2,34 @@
 
 namespace App\ServiceManagers;
 
-use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
+use App\CombinationManagers\ApplicationPageCombinationManager;
+use App\Contracts\Transactions\TransactionManagerInterface;
 use App\Services\AuthenticationService;
 use App\Services\UserService;
 
-class AuthenticationServiceManager implements AuthenticationServiceManagerInterface
+class AuthenticationServiceManager
 {
     public function __construct(
         private readonly AuthenticationService $authenticationService,
         private readonly UserService $userService,
+        private readonly ApplicationPageCombinationManager $applicationPageCombinationManager,
+        private readonly TransactionManagerInterface $transactionManager,
     ) {}
+
+    public function page(string $pageName, ?int $userId = null): array
+    {
+        return $this->applicationPageCombinationManager->buildPageData($pageName, $userId);
+    }
 
     /**
      * @param  array{name: string, email: string, password: string}  $attributes
      */
     public function register(array $attributes): void
     {
-        $registeredUser = $this->userService->create($attributes);
-        $this->authenticationService->login($registeredUser);
+        $this->transactionManager->run(function () use ($attributes): void {
+            $registeredUser = $this->userService->create($attributes);
+            $this->authenticationService->login($registeredUser);
+        });
     }
 
     /**

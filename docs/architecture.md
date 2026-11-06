@@ -1,218 +1,134 @@
-# 專案架構準則
+# CrowdTalk 專案架構
 
-本專案採用 Combination & Cache 分層架構，並配合 Laravel 13 的 Service Container、Eloquent、Validation 與 Cache 實作。
+本文件說明本專案目前的分層職責與既有目錄配置。新增與修改功能應沿用現有目錄、命名空間及類別名稱，並參考[通用分層架構設計與重構指南](infrastructure-refactoring-guide.md)。通用指南的範例依實際需求選用，不構成固定路徑、類別數量或套件要求。
 
-## 資料流程
+## 主要呼叫鏈
 
 ```text
-HTTP Request
-  └─ FormRequest（正規化、驗證、只輸出允許欄位）
-      ├─ Checker
-      │   └─ Validator（提供規則）
-      └─ Controller（HTTP／Session 與 ResponseMaker Contract）
-          └─ Container Contract
-              └─ Container（由 Contextual Binding 決定實作）
-                  ├─ ServiceManager Contract
-                  │   └─ ServiceManager
-                  │       └─ Service
-                  │           ├─ Repository
-                  │           │   ├─ CacheManager
-                  │           │   └─ Model
-                  │           │       └─ Presenter
-                  │           └─ Combination
-                  ├─ TransactionManager Contract
-                  │   └─ DatabaseTransactionManager
-                  └─ CombinationManager
-                      ├─ Service
-                      └─ Combination
+HTTP middleware（web、auth／guest、CSRF）
+  → FormRequest（正規化、驗證、白名單資料）
+      → Checker → Validators（現有規則來源）
+  → Controller（HTTP、Session、既有 ResponseMaker）
+  → ServiceManagers（流程、交易邊界）
+  → Services（領域操作）
+  → Contracts/Repositories/*RepositoryInterface（interface）
+      → Repositories/*Repository（implementation）
+      → Models（Eloquent）
 ```
 
-目前會員系統的實際流程：
+查詢結果沿原方法的契約回傳。單一領域的輸出由 Combination 整理；頁面資料由 CombinationManage 組合。只有實際依賴客製 Collection 型別或映射方法時才建立 OrmCollection。
+
+目前沒有平台或身分實作切換，因此 Controller 直接注入具體 ServiceManage，沒有 Container、ServiceManager interface、SwitchServiceManage、策略 Contract、Factory interface 或策略 Config。既有類別仍命名為 AuthenticationServiceManager、PostServiceManager、UserProfileServiceManager，保留原類名；目錄沿用 app/ServiceManagers。
+
+## 現有功能
+
+### 會員認證
 
 ```text
 AuthController
-  ├─ RegisterRequest／LoginRequest
-  │   └─ AuthenticationChecker → UserValidator
-  └─ AuthenticationContainerInterface
-      └─ WebAuthenticationContainer（EntryContextServiceProvider 決定）
-          ├─ AuthenticationServiceManagerInterface → AuthenticationServiceManager
-          │   ├─ AuthenticationService
-          │   └─ UserService → UserRepository → User Model → UserPresenter
-          │                         └─ UserCacheManager
-          └─ ApplicationPageCombinationManager
-              ├─ UserService
-              └─ ApplicationPageCombination
+  → AuthenticationServiceManager
+      ├─ register → transaction → UserService::create
+      │                            → UserRepositoryInterface → UserRepository → User
+      │                          → AuthenticationService::login
+      ├─ authenticate → AuthenticationService::authenticate
+      ├─ logout → AuthenticationService::logout
+      └─ page → ApplicationPageCombinationManager
+                 → UserService → UserRepository → User
+                 → ApplicationPageCombination
 ```
 
-個人檔案流程：
+AuthenticationService 保留 Laravel 的 Auth::attempt、Auth::login、Auth::logout 與 RateLimiter；帳密驗證仍由原 session guard 及 EloquentUserProvider 執行。Auth Provider 沿用既有 App\Models\User。
 
-```text
-ProfileController
-  ├─ ApplicationRequest／UpdateProfileRequest
-  │   └─ ProfileChecker → UserValidator
-  └─ ProfileContainerInterface
-      └─ WebProfileContainer（EntryContextServiceProvider 決定）
-          ├─ UserProfileServiceManagerInterface → UserProfileServiceManager
-          │   └─ UserService → UserRepository → UserCacheManager → User Model
-          ├─ TransactionManagerInterface（更新資料時使用）
-          └─ ApplicationPageCombinationManager（組合頁面初始資料）
-```
+Controller 保留 Session regenerate、invalidate、regenerateToken 的原執行位置。RedirectAuthenticatedRequests 仍將已登入使用者的 JSON 登入／註冊請求回應為含 redirect 的 JSON；一般頁面請求維持 HTTP 302。
 
-貼文牆流程：
+### 動態牆
 
 ```text
 FeedController
-  ├─ FeedIndexRequest／StorePostRequest／StoreCommentRequest
-  │   └─ PostChecker → PostValidator
-  └─ FeedContainerInterface
-      └─ WebFeedContainer（EntryContextServiceProvider 決定）
-          └─ PostServiceManagerInterface → PostServiceManager
-              ├─ PostService → PostRepository → Post／Comment／PostLike Model
-              └─ PostCombination
+  → PostServiceManager（寫入流程包含 transaction 與輸出組裝）
+      → PostService → PostRepositoryInterface → PostRepository
+                                      → Post／Comment／PostLike
+      → PostCombination
 ```
 
-貼文列表使用 `PostConstant::FEED_PER_PAGE` 控制每批筆數，並採用依 `posts.id` 倒序的 cursor pagination，供 Vue `IntersectionObserver` 進行無限滾動續載。
+PostService::feed 回傳 CursorPaginator；PostService 的 create、toggleLike、comment 回傳 Post；Repository 的 toggleLike 回傳 bool，createComment 回傳 Comment。ServiceManage 才回傳原有 array。貼文依 id 倒序、每批 10 筆游標分頁；留言依 id 正序。HTTP feed metadata 保留 next_cursor、has_more。
 
-## 目錄職責
+### 個人檔案與大頭貼
+
+```text
+ProfileController
+  → UserProfileServiceManager
+      ├─ profile／updateProfile／updateProfileImage
+      │   → UserService → UserRepositoryInterface → UserRepository → User
+      │       ├─ UserCombination
+      │       └─ ProfileImageStorageInterface → LocalProfileImageStorage
+      └─ page → ApplicationPageCombinationManager
+```
+
+更新姓名、Email 與照片的交易由 ServiceManage 控制，涵蓋原本 Container 的完整範圍。UserRepository 寫入後仍只清除受影響的會員快取。照片上傳、替換、舊檔刪除與寫入失敗時的新檔清除順序保持不變。
+
+## 目錄與職責
+
+各層沿用下列既有路徑。ServiceManage、CombinationManage 等名稱表示職責，不要求變更目錄拼字、深度或 namespace。
 
 | 目錄 | 職責 |
 | --- | --- |
-| `app/Http/Controllers` | 控制 HTTP/session 與回應，只依賴 Container／Response Contract |
-| `app/Http/Requests` | 正規化與驗證 HTTP input，提供明確型別的 payload、cursor 與登入者 ID |
-| `app/Contracts/Containers` | 定義特定入口可執行的應用操作 |
-| `app/Contracts/Responses` | 定義 HTTP 回應製造介面，隔離 Controller 與 JSON 實作 |
-| `app/Contracts/ServiceManagers` | 定義入口 Container 可使用的商業流程介面 |
-| `app/Contracts/Storage` | 定義檔案儲存抽象，隔離商業流程與本機／雲端磁碟實作 |
-| `app/Contracts/Transactions` | 定義 transaction 執行邊界，隔離應用流程與資料庫實作 |
-| `app/Responses` | 實作統一的 message、data、meta、duration 與 datetime 回應格式 |
-| `app/Containers` | 作為 Controller 與應用層的邊界，決定入口流程組合並控制寫入 transaction |
-| `app/Transactions` | 使用 Laravel database connection 實作 transaction、rollback 與重試 |
-| `app/Checkers` | 依使用案例組合一或多個 Validator 規則，透過 FormRequest method injection 解析 |
-| `app/Validators` | 提供單一領域資料的 Laravel validation rules |
-| `app/ServiceManagers` | 組合多個 Service 的商業流程 |
-| `app/Services` | 商業邏輯，只透過 Repository 存取資料 |
-| `app/Contracts/Repositories` | Repository 抽象介面 |
-| `app/Repositories` | Eloquent 查詢與資料持久化 |
-| `app/Models` | 資料表、關聯、型別轉換設定 |
-| `app/Presenters` | Model 欄位的輸出格式轉換 |
-| `app/Combinations` | 將 Repository／Model 資料整理成可用資訊 |
-| `app/CombinationManagers` | 結合多個 Service 與 Combination 的輸出 |
-| `app/CacheManagers` | 集中管理 cache key、存取期限與清除策略 |
-| `app/Constants` | 集中管理具語意的固定狀態與數值 |
-| `app/Supports` | 無領域狀態、可獨立完成的共用轉換邏輯 |
-| `app/ExceptionCodes` | 集中管理領域錯誤代碼 |
-| `app/Exceptions` | 領域例外與一致的 HTTP 回應格式 |
-| `app/Providers` | 依 Repository、Application infrastructure、Entry Context 分開註冊 container bindings |
-| `app/Storage` | 實作照片等檔案的儲存、刪除與公開 URL 產生 |
+| app/ServiceManagers | 應用流程、跨 Service 協調、既有交易邊界與輸出組裝 |
+| app/Services | 領域操作、例外與 Repository 呼叫 |
+| app/Contracts/Repositories、app/Repositories | 既有 XxxRepositoryInterface 與 XxxRepository，集中查詢與 CRUD |
+| app/Models | 資料表、欄位、casts、關聯、序列化與 Factory 指定 |
+| app/Checkers、app/Validators | 現有驗證規則入口；Validators 保存單一領域規則 |
+| app/Combinations | 單一領域輸出欄位及游標分頁格式 |
+| app/CombinationManagers | 透過 Service 取得資料並組合完整頁面 |
+| app/Providers | Repository 綁定及必要的 I/O 介面綁定 |
+| app/CacheManagers | 快取 key、TTL、純量 payload 與局部清除 |
+| app/Presenters | 保留 User::present 的既有欄位轉換 |
+| app/Storage | 照片儲存、刪除、同網域公開 URL 與既有介面 |
+| app/Transactions | Laravel 原連線的 transaction、rollback 與 attempts 預設值 |
+| app/Responses | 既有 JSON 回應工具與介面 |
+| app/Constants、app/Supports | 領域常數、品牌設定與無狀態共用轉換 |
+| app/ExceptionCodes、app/Exceptions | 既有錯誤代碼、訊息及 HTTP 轉換 |
+| app/Http | Controller、FormRequest、Middleware；HTTP 物件不傳入業務層 |
+| database/factories | 沿用既有 Factory 與 App\Models 的預設對應慣例 |
+| bootstrap/providers.php | 載入 app/Providers 的 RepositoryServiceProvider、ApplicationServiceProvider |
 
-## 存取限制
+ResponseMakerInterface、TransactionManagerInterface、ProfileImageStorageInterface 是既有 I/O 抽象，與參考文件中用於平台切換的具體 Contract 入口不同。介面沿用 app/Contracts 的既有子目錄，實作沿用 app/Responses、app/Transactions、app/Storage，不新增業務入口包裝。
 
-1. 不得跨越兩個以上的控制層直接存取。
-2. Controller 只能依賴 FormRequest、Container Contract 與 Response Contract，不得直接存取 Checker、CombinationManager、ServiceManager、Service、Repository、Validator 或 Model。
-3. Service 不得直接查詢 Model，資料存取必須經過 Repository。
-4. 低階層不得反向存取高階層。
-5. 同類型類別不得互相呼叫，避免循環依賴。
-6. CacheManager、Constant、Support、ExceptionCode 為獨立結構，可被各層使用。
-7. 寫入資料的 transaction 由入口 Container 透過 `TransactionManagerInterface` 控制；Controller 與 Container 都不得直接依賴資料庫 facade。
-8. FormRequest 透過 Checker 取得 Validator 規則；Container 只接收已驗證資料，並只依賴 ServiceManager contract，不得跳層直接存取具體 ServiceManager、Service、Repository、Validator 或 Model。
-9. Blade 與 Vue 只負責呈現；衍生欄位應由 Presenter 或 Combination 先行準備。
-10. Controller 禁止使用 `$request->all()` 或 `$request[...]`；輸入資料必須來自 FormRequest 的明確方法。
+## 相容性規則
 
-## 常數與環境設定規範
+1. 保留 API 路徑、method、路由名稱、middleware、認證授權、CSRF、輸入白名單及預設值。
+2. 保留變數、屬性、參數名稱、公開方法的既有參數順序與回傳格式。Controller 的 authenticationContainer、feedContainer、profileContainer 屬性名稱因相容要求保留，其型別已改為具體 ServiceManage。
+3. 保留 HTTP 狀態、message、data、redirect、code、errors、meta、duration、datetime；不可統一改套參考專案的其他回應版本。
+4. 現有 Checker 只回傳規則陣列，失敗仍由 FormRequest 轉換為 DomainValidationException。不可擅自加上 status 包裝或把驗證移到寫入之後。
+5. 未來沿用 fails 型 Checker 時，status=true 代表失敗；必須依該功能原有的 messages／json_messages／message 格式處理。
+6. 本專案目前沒有 skipPresenter 或 combinationType，不新增假定的通用 API。若未來引入既有模組，須逐方法保留 Builder 的執行時機及所有分支。
+7. 保留原 Model namespace、table、connection、fillable、hidden、casts、關聯與日期格式。僅在使用者明確要求搬移時，同步更新 Auth Provider、Factory、Cache 與全部呼叫端。
+8. 不以直接 Model 查詢繞過 Repository。保留 Laravel guard 本身的認證與資料讀取流程。
+9. Repository、ServiceManage 不設為 singleton；RepositoryServiceProvider 使用一般 bind，避免可變 Model 或查詢狀態跨使用案例共用。
+10. 交易由 ServiceManage 透過 TransactionManagerInterface 控制。只在原本有交易的操作開始交易；try/catch 僅在原有補償或例外轉換位置保留。
+11. 保留照片補償順序；不把檔案操作宣稱為資料庫交易的一部分。
+12. 只使用已確認安裝的框架與套件基底，不得依名稱猜測第三方套件 API。
+13. 沿用既有目錄、namespace、類別與介面名稱；通用指南的範例不構成搬移或改名要求。只有存在多實作與選擇需求時，才評估策略、Factory、Resolver 或設定，並測試實際存在的分支。
+14. 新功能不得建立空包裝、空方法、dd 或複製參考 TODO。具實際集合映射需求才建立 OrmCollection 並調整 Model::newCollection。
 
-- 產品名稱、品牌色、route/page 識別、驗證限制、cache key／TTL／payload version 等會隨產品版本調整的參數，統一定義於 `app/Constants`。
-- PHP 參數由對應 Constant 直接引用；Vue 與 CSS 所需參數由 Combination 傳入 `applicationData`，不得在前端重複寫死。
-- 資料庫連線、外部服務憑證、主機 URL 等會隨部署環境變動或涉及機密的設定，維持於 `.env` 與 `config`，不得放入 Constants。
-- 可翻譯的使用者文案應放入語系檔；Constants 不負責取代 Laravel localization。
-- `ProjectConstant` 管理專案名稱與品牌視覺參數，`AuthenticationConstant` 管理登入／註冊流程參數，`UserConstant` 管理會員與快取參數。
-- `PostConstant` 管理貼文長度、回覆長度、每批載入筆數、route 與 URI。
+## 常數、快取與錯誤
 
-## Container 選擇規範
+- 產品名稱、品牌色、route/page 識別、限制、TTL、key pattern 仍由 Constants 管理；Vue、CSS 透過既有 applicationData 取得。
+- DB、憑證與環境 URL 維持於環境設定，不搬入 Constants。
+- 會員快取 key 維持 [UserById][user_id:{id}]；payload 保留 version 與純量 attributes，不存 Model 序列化物件。不得 Cache::flush。
+- 錯誤碼範圍維持：1101xxx 認證、1201xxx 會員資料、1301xxx 貼文互動。
 
-- Controller 建構子只注入 `app/Contracts/Containers` 與 `app/Contracts/Responses` 下的介面。
-- Controller action 只接受對應的 FormRequest，不得將 Laravel Request 物件傳入 Container、ServiceManager 或 Service。
-- Controller 不得直接注入具體 Service 或 ServiceManager；若入口需要新的商業流程，應先擴充 Container Contract，再由 Provider 決定實作。
-- `EntryContextServiceProvider` 使用 Laravel contextual binding，依 Controller 決定 Container 實作；因此在任何 Service 被調用前，入口容器已經確定。
-- Container 負責使用案例與 transaction 的編排，不處理 HTTP response 或 session。
-- `EntryContextServiceProvider` 只負責 Controller → Container 的 contextual binding。
-- `ApplicationServiceProvider` 負責 ServiceManager、ResponseMaker 與 TransactionManager contracts。
-- `RepositoryServiceProvider` 只負責 Repository contract → Eloquent Repository bindings。
-- `ResponseMakerInterface` 由 `JsonResponseMaker` 實作，Controller 不直接呼叫 `response()->json()`；未來替換回應格式時不必修改 Controller。
-- 例如未來新增 OAuth 入口時，可建立 `OauthAuthenticationContainer`，並將對應 Controller 綁定到該實作，不必修改既有 Service。
+## 驗證
 
-上述主要限制由 `tests/Unit/LayerDependencyTest.php` 自動檢查。
+```bash
+composer dump-autoload
+php artisan test
+node --test tests/Frontend/http.test.js
+npm run build
+vendor/bin/pint --test app bootstrap/app.php bootstrap/providers.php config database routes tests
+git diff --check
+```
 
-## 命名規範
+LayerDependencyTest 防止 HTTP 邊界跳過 ServiceManage、低階層反向依賴與分層檢查因空目錄失效。ServiceManageTransactionTest 驗證註冊、發文、個人資料的交易回滾與照片寫入失敗補償。既有 Feature 測試負責 API、認證、錯誤、分頁與快取契約。
 
-- Controller action 的 FormRequest 參數名稱必須由具體型別完整衍生，例如 `FeedIndexRequest $feedIndexRequest`、`StorePostRequest $storePostRequest`；函式內必須持續使用相同名稱。
-- 基礎的 Laravel `Request` 使用 `$httpRequest`，專案自訂的 `ApplicationRequest` 使用 `$applicationRequest`，不得退回無法辨識具體用途的 `$request`。
-- 函式、參數、屬性與區域變數必須描述領域與用途，例如 `$authenticationThrottleKey`、`$cachedUserPayload`、`$feedResponsePayload`；不得使用 `$tmp`、`$obj`、`$val`、`$result` 等需要讀者猜測的名稱。
-- 布林值使用可直接判讀的狀態名稱，例如 `$authenticationSucceeded`、`$feedRequestInProgress`、`$isLoginPage`。
-- 標準技術縮寫 `HTTP`、`URL`、`API`、`ID`、`IP`、`CSRF` 可保留，但必須附帶領域上下文，例如 `$postId`、`$feedEndpointUrl`、`$ipAddress`。
-- JSON 欄位、資料庫欄位與既有 HTTP 契約不因內部重新命名而任意變更；例如對外的 `data`、`meta`、`user_id` 保持相容，內部變數則使用 `$responseData`、`$metadata`、`$userId`。
-- `tests/Unit/LayerDependencyTest.php` 會檢查 Request 型別與參數名稱，防止具體 FormRequest 再次被命名為 `$request`。
-
-## Taichi API 參考架構採用原則
-
-本專案採用參考專案的 Repository Provider、ServiceManage contract、Combination／CombinationManage 與交易封裝概念，但依 Laravel 13 與目前規模作以下調整：
-
-- 保留：各層專屬 Service Provider、Repository interface、ServiceManager 流程編排、Combination 輸出整理、情境式 Container 選擇。
-- 改良：以 constructor injection 與固定 contract binding 取代執行途中呼叫全域 `App::bind()`，避免長駐程序發生跨請求狀態污染。
-- 改良：以無狀態 `TransactionManagerInterface` 取代 DB transaction trait，便於測試 rollback 與替換資料庫實作。
-- 不採用：具可變回傳狀態的 AbstractService／AbstractCombination、Controller 直接 new Repository、Request 傳入 Service，以及 trait 型 response maker。
-- 安全：參考壓縮檔內的 `.env`、OAuth key、`.git`、`vendor` 與 runtime storage 不屬於架構來源，禁止複製進本專案。
-
-## Cache 規範
-
-- Cache key 只能由對應的 CacheManager 產生。
-- 會員快取格式：`[UserById][user_id:{id}]`。
-- TTL 集中定義於 `UserConstant::CACHE_TTL_SECONDS`。
-- Repository 寫入資料後必須清除受影響的 cache key。
-- 不得使用 `Cache::flush()`，避免清除其他模組或共用應用程式的資料。
-
-## 例外碼範圍
-
-| 範圍 | 領域 |
-| --- | --- |
-| `1101xxx` | 註冊、登入與驗證流程 |
-| `1201xxx` | 會員資料流程 |
-| `1301xxx` | 貼文、按讚與回覆流程 |
-
-新增錯誤時，應先在對應的 `ExceptionCodes` 類別定義，再由領域例外輸出 `message`、`code` 與欄位 `errors`。
-
-## 個人檔案流程
-
-| 方法 | 路徑 | 用途 |
-| --- | --- | --- |
-| `GET` | `/profile` | 顯示登入會員的個人檔案頁 |
-| `GET` | `/api/profile` | 取得登入會員的個人檔案資料 |
-| `PATCH` | `/api/profile` | 更新登入會員的姓名與 Email |
-| `POST` | `/api/profile/image` | 上傳或替換登入會員的個人照片 |
-
-- 三條路由都必須套用 `auth` middleware；更新 API 同時受 `web` middleware 的 CSRF 保護。
-- `UpdateProfileRequest` 只輸出 `name` 與 `email`，會員 ID 一律取自 authenticated user，不接受前端指定。
-- Email 唯一性驗證只能用系統取得的會員 ID 排除本人，不得把 request input 傳入 `Rule::ignore()`。
-- 更新流程由 `ProfileContainerInterface` 控制 transaction，並經 `UserProfileServiceManagerInterface`、`UserService`、`UserRepositoryInterface` 寫入。
-- Repository 更新成功後必須清除 `UserCacheManager` 對應的會員快取，避免頁面繼續顯示舊資料。
-- 個人照片目前由 `ProfileImageStorageInterface` 的 `LocalProfileImageStorage` 實作儲存於 `public` disk；資料庫只保存相對路徑，頁面只接收公開 URL。
-- 照片路徑格式為 `profile-images/{userId}/{generatedFileName}`，允許 JPG、JPEG、PNG、WebP，上限 5 MB、最大 2048×2048；SVG 不開放上傳。
-- 照片公開 URL 固定使用同網域相對路徑 `/storage/profile-images/{userId}/{generatedFileName}`，避免本機以 `localhost` 或 `127.0.0.1` 啟動時受 `APP_URL` 主機名稱與連接埠差異影響。
-- 個人檔案選取照片後會立即上傳；導覽列、發文框、貼文作者、留言作者及留言輸入區一律使用 API 回傳的 `profile_image_url`，沒有照片時才顯示姓名縮寫。
-- 替換照片時必須在新檔與資料庫更新成功後刪除舊檔；寫入失敗則清除新檔，避免孤兒檔案。
-- 本機環境必須執行 `php artisan storage:link`，讓 `/storage/*` 公開 URL 指向 `storage/app/public`。
-
-## 新功能擴充步驟
-
-以新增「貼文」為例：
-
-1. 建立 `Post` Model 與 migration。
-2. 建立 `PostRepositoryInterface`、`PostRepository` 與 Service Container binding。
-3. 建立 `PostValidator`、`PostChecker` 與對應 FormRequest，透過 `rules()` method injection 組合規則。
-4. FormRequest 以明確的 `payload()`／存取方法只輸出已驗證欄位。
-5. 建立 `PostService`；需要跨 Service 流程時再建立 `PostServiceManager`。
-6. 衍生欄位放入 `PostPresenter` 或 `PostCombination`。
-7. 跨來源頁面資料由 `PostCombinationManager` 組合。
-8. 複雜查詢需要快取時建立 `PostCacheManager`。
-9. 建立 `PostContainerInterface` 與入口所需的 Container 實作，並於 `EntryContextServiceProvider` 設定 contextual binding。
-10. Controller 只把 FormRequest 的已驗證資料交給 `PostContainerInterface`；transaction 由 Container 控制。
-11. 增加行為測試、Request 邊界測試與分層限制測試。
+每次交付須列出完成後呼叫鏈、檔案職責、實際執行的驗證與未驗證項目。

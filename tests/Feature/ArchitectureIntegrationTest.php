@@ -5,14 +5,9 @@ namespace Tests\Feature;
 use App\CacheManagers\UserCacheManager;
 use App\Constants\ProjectConstant;
 use App\Constants\UserConstant;
-use App\Containers\Authentication\WebAuthenticationContainer;
-use App\Containers\Feed\WebFeedContainer;
-use App\Containers\Profile\WebProfileContainer;
+use App\Contracts\Repositories\PostRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
-use App\Contracts\ServiceManagers\AuthenticationServiceManagerInterface;
-use App\Contracts\ServiceManagers\PostServiceManagerInterface;
-use App\Contracts\ServiceManagers\UserProfileServiceManagerInterface;
 use App\Contracts\Storage\ProfileImageStorageInterface;
 use App\Contracts\Transactions\TransactionManagerInterface;
 use App\Http\Controllers\AuthController;
@@ -20,7 +15,6 @@ use App\Http\Controllers\FeedController;
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
 use App\Providers\ApplicationServiceProvider;
-use App\Providers\EntryContextServiceProvider;
 use App\Providers\RepositoryServiceProvider;
 use App\Repositories\UserRepository;
 use App\Responses\JsonResponseMaker;
@@ -30,6 +24,9 @@ use App\ServiceManagers\UserProfileServiceManager;
 use App\Services\UserService;
 use App\Storage\LocalProfileImageStorage;
 use App\Transactions\DatabaseTransactionManager;
+use Database\Factories\CommentFactory;
+use Database\Factories\PostFactory;
+use Database\Factories\UserFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
@@ -47,6 +44,27 @@ class ArchitectureIntegrationTest extends TestCase
         );
     }
 
+    public function test_repositories_and_service_managers_do_not_share_mutable_instances(): void
+    {
+        foreach ([UserRepositoryInterface::class, PostRepositoryInterface::class, AuthenticationServiceManager::class, PostServiceManager::class, UserProfileServiceManager::class] as $resolvedClass) {
+            $this->assertNotSame($this->app->make($resolvedClass), $this->app->make($resolvedClass));
+        }
+    }
+
+    public function test_factory_entrypoints_and_model_relationships_resolve_after_namespace_changes(): void
+    {
+        $createdUser = UserFactory::new()->create();
+        $createdPost = PostFactory::new()->for($createdUser)->create();
+        $createdComment = CommentFactory::new()->for($createdPost)->for($createdUser)->create();
+
+        $this->assertTrue($createdPost->user->is($createdUser));
+        $this->assertTrue($createdComment->post->is($createdPost));
+        $this->assertTrue($createdComment->user->is($createdUser));
+        $this->assertTrue($createdUser->posts->first()->is($createdPost));
+        $this->assertTrue($createdUser->comments->first()->is($createdComment));
+        $this->assertTrue($createdPost->comments->first()->is($createdComment));
+    }
+
     public function test_response_maker_contract_is_bound_to_the_json_response_maker(): void
     {
         $this->assertInstanceOf(
@@ -57,18 +75,6 @@ class ArchitectureIntegrationTest extends TestCase
 
     public function test_application_contracts_are_bound_to_their_implementations(): void
     {
-        $this->assertInstanceOf(
-            AuthenticationServiceManager::class,
-            $this->app->make(AuthenticationServiceManagerInterface::class),
-        );
-        $this->assertInstanceOf(
-            PostServiceManager::class,
-            $this->app->make(PostServiceManagerInterface::class),
-        );
-        $this->assertInstanceOf(
-            UserProfileServiceManager::class,
-            $this->app->make(UserProfileServiceManagerInterface::class),
-        );
         $this->assertInstanceOf(
             DatabaseTransactionManager::class,
             $this->app->make(TransactionManagerInterface::class),
@@ -85,7 +91,6 @@ class ArchitectureIntegrationTest extends TestCase
 
         $this->assertArrayHasKey(RepositoryServiceProvider::class, $loadedServiceProviders);
         $this->assertArrayHasKey(ApplicationServiceProvider::class, $loadedServiceProviders);
-        $this->assertArrayHasKey(EntryContextServiceProvider::class, $loadedServiceProviders);
     }
 
     public function test_transaction_manager_rolls_back_failed_work(): void
@@ -105,14 +110,14 @@ class ArchitectureIntegrationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
     }
 
-    public function test_auth_controller_receives_the_web_authentication_container_contextually(): void
+    public function test_auth_controller_receives_the_authentication_service_manager(): void
     {
         $authenticationController = $this->app->make(AuthController::class);
         $authenticationContainerProperty = new \ReflectionProperty($authenticationController, 'authenticationContainer');
         $responseMakerProperty = new \ReflectionProperty($authenticationController, 'responseMaker');
 
         $this->assertInstanceOf(
-            WebAuthenticationContainer::class,
+            AuthenticationServiceManager::class,
             $authenticationContainerProperty->getValue($authenticationController),
         );
         $this->assertInstanceOf(
@@ -121,14 +126,14 @@ class ArchitectureIntegrationTest extends TestCase
         );
     }
 
-    public function test_feed_controller_receives_the_web_feed_container_contextually(): void
+    public function test_feed_controller_receives_the_post_service_manager(): void
     {
         $feedController = $this->app->make(FeedController::class);
         $feedContainerProperty = new \ReflectionProperty($feedController, 'feedContainer');
         $responseMakerProperty = new \ReflectionProperty($feedController, 'responseMaker');
 
         $this->assertInstanceOf(
-            WebFeedContainer::class,
+            PostServiceManager::class,
             $feedContainerProperty->getValue($feedController),
         );
         $this->assertInstanceOf(
@@ -137,14 +142,14 @@ class ArchitectureIntegrationTest extends TestCase
         );
     }
 
-    public function test_profile_controller_receives_the_web_profile_container_contextually(): void
+    public function test_profile_controller_receives_the_profile_service_manager(): void
     {
         $profileController = $this->app->make(ProfileController::class);
         $profileContainerProperty = new \ReflectionProperty($profileController, 'profileContainer');
         $responseMakerProperty = new \ReflectionProperty($profileController, 'responseMaker');
 
         $this->assertInstanceOf(
-            WebProfileContainer::class,
+            UserProfileServiceManager::class,
             $profileContainerProperty->getValue($profileController),
         );
         $this->assertInstanceOf(

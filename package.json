@@ -1,6 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
-    "name": "wetalk",
+    "name": "crowdtalk",
     "private": true,
     "type": "module",
     "scripts": {

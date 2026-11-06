@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Constants\AuthenticationConstant;
 use App\Constants\HttpCodeConstant;
-use App\Contracts\Containers\AuthenticationContainerInterface;
 use App\Contracts\Responses\ResponseMakerInterface;
 use App\Http\Requests\ApplicationRequest;
 use App\Http\Requests\Authentication\LoginRequest;
 use App\Http\Requests\Authentication\RegisterRequest;
+use App\ServiceManagers\AuthenticationServiceManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -16,7 +16,7 @@ use Illuminate\View\View;
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly AuthenticationContainerInterface $authenticationContainer,
+        private readonly AuthenticationServiceManager $authenticationContainer,
         ResponseMakerInterface $responseMaker,
     ) {
         parent::__construct($responseMaker);
@@ -54,7 +54,7 @@ class AuthController extends Controller
 
     public function login(LoginRequest $loginRequest): JsonResponse
     {
-        $this->authenticationContainer->login($loginRequest->payload(), $loginRequest->ip());
+        $this->authenticationContainer->authenticate($loginRequest->payload(), $loginRequest->ip());
         $loginRequest->session()->regenerate();
 
         return $this->responseMaker->createResponse(

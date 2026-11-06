@@ -93,7 +93,7 @@ onBeforeUnmount(() => feedIntersectionObserver?.disconnect());
             </section>
 
             <div v-if="!feedRequestInProgress && !posts.length && !errorMessage" class="empty-feed surface-card text-center">
-                <div class="empty-feed__icon">W</div>
+                <div class="empty-feed__icon">{{ applicationData.project.name.charAt(0) }}</div>
                 <h2 class="h5 fw-bold">動態牆還很安靜</h2>
                 <p class="text-secondary mb-0">成為第一個分享近況的人吧。</p>
             </div>

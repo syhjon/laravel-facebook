@@ -4,7 +4,7 @@ namespace App\Constants;
 
 final class ProjectConstant
 {
-    public const NAME = 'WeTalk';
+    public const NAME = 'CrowdTalk';
 
     public const TECHNOLOGY_LABEL = 'Laravel · Vue · Bootstrap';
 

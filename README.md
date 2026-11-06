@@ -1,8 +1,8 @@
-# WeTalk
+# CrowdTalk
 
 以 Laravel、Vite 與 Vue 建立的社群交流專案。
 
-專案採用 Combination & Cache 分層設計，開發規範請參閱 [專案架構準則](docs/architecture.md)。
+專案依分層職責設計，沿用既有目錄與命名空間；開發規範請參閱 [專案架構準則](docs/architecture.md) 與 [通用分層架構設計與重構指南](docs/infrastructure-refactoring-guide.md)。
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 

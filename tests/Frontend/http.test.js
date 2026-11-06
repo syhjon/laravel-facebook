@@ -29,7 +29,7 @@ test('successful authentication preserves the dashboard redirect in JSON', async
 for (const redirectPath of ['/dashboard', '/login']) {
     test(`an HTML redirect to ${redirectPath} navigates without returning an empty payload`, async () => {
         const redirectUrl = `http://127.0.0.1:8000${redirectPath}`;
-        const redirectedResponse = new Response('<!DOCTYPE html><title>WeTalk</title>');
+        const redirectedResponse = new Response('<!DOCTYPE html><title>CrowdTalk</title>');
         Object.defineProperties(redirectedResponse, {
             redirected: { value: true },
             url: { value: redirectUrl },
@@ -43,7 +43,7 @@ for (const redirectPath of ['/dashboard', '/login']) {
 }
 
 test('an unexpected HTML response fails instead of allowing navigation to undefined', async () => {
-    mock.method(globalThis, 'fetch', async () => new Response('<!DOCTYPE html><title>WeTalk</title>'));
+    mock.method(globalThis, 'fetch', async () => new Response('<!DOCTYPE html><title>CrowdTalk</title>'));
 
     await assert.rejects(apiRequest('/login', { method: 'POST' }), (error) => {
         assert.ok(error instanceof ApiError);

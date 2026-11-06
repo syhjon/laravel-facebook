@@ -15,59 +15,76 @@ class LayerDependencyTest extends TestCase
             'Http/Controllers' => [
                 'App\\Checkers\\',
                 'App\\CombinationManagers\\',
+                'App\\Combinations\\',
                 'App\\Repositories\\',
-                'App\\ServiceManagers\\',
                 'App\\Services\\',
-                'App\\Validators\\',
                 'App\\Models\\',
             ],
             'Http/Requests' => [
                 'App\\CombinationManagers\\',
-                'App\\Containers\\',
                 'App\\Models\\',
                 'App\\Repositories\\',
                 'App\\ServiceManagers\\',
                 'App\\Services\\',
             ],
-            'Containers' => [
-                'App\\Containers\\',
+            'CombinationManagers' => [
+                'App\\Http\\',
                 'App\\Models\\',
                 'App\\Repositories\\',
                 'App\\ServiceManagers\\',
-                'App\\Services\\',
-                'App\\Validators\\',
+                'App\\Checkers\\',
             ],
             'Services' => [
-                'App\\Http\\Controllers\\',
+                'App\\Http\\',
                 'App\\ServiceManagers\\',
-                'App\\Services\\',
+                'App\\Providers\\',
             ],
             'Repositories' => [
+                'App\\Http\\',
+                'App\\Services\\',
+                'App\\ServiceManagers\\',
+                'App\\Combinations\\',
+                'App\\CombinationManagers\\',
+                'App\\Checkers\\',
+            ],
+            'Models' => [
+                'App\\Http\\',
                 'App\\Services\\',
                 'App\\ServiceManagers\\',
                 'App\\Repositories\\',
-            ],
-            'Validators' => [
-                'App\\Checkers\\',
-                'App\\Validators\\',
             ],
             'Checkers' => [
-                'App\\Checkers\\',
+                'App\\Http\\',
                 'App\\Services\\',
                 'App\\Repositories\\',
+                'App\\Models\\',
+                'App\\ServiceManagers\\',
+            ],
+            'Validators' => [
+                'App\\Http\\',
+                'App\\Services\\',
+                'App\\Repositories\\',
+                'App\\Models\\',
+                'App\\ServiceManagers\\',
             ],
             'ServiceManagers' => [
-                'App\\ServiceManagers\\',
+                'App\\Http\\',
                 'App\\Repositories\\',
                 'App\\Models\\',
             ],
-            'CacheManagers' => [
-                'App\\CacheManagers\\',
+            'Combinations' => [
+                'App\\Http\\',
+                'App\\Services\\',
+                'App\\ServiceManagers\\',
+                'App\\Repositories\\',
             ],
         ];
 
         foreach ($rules as $directory => $forbiddenNamespaces) {
-            foreach ($this->phpFiles(app_path($directory)) as $file) {
+            $layerFiles = $this->phpFiles(app_path($directory));
+            $this->assertNotEmpty($layerFiles, "{$directory} 必須實際受分層檢查保護");
+
+            foreach ($layerFiles as $file) {
                 $contents = file_get_contents($file);
 
                 foreach ($forbiddenNamespaces as $namespace) {
@@ -96,7 +113,7 @@ class LayerDependencyTest extends TestCase
             $this->assertStringNotContainsString(
                 'DB::transaction(',
                 $contents,
-                "{$file} 必須將 transaction 委派給入口 Container",
+                "{$file} 必須將 transaction 委派給 ServiceManage",
             );
             $this->assertDoesNotMatchRegularExpression(
                 '/\$request->all\s*\(/',
@@ -139,9 +156,12 @@ class LayerDependencyTest extends TestCase
         }
     }
 
-    public function test_containers_delegate_transactions_and_service_manager_resolution(): void
+    public function test_service_managers_delegate_transactions_to_the_transaction_manager(): void
     {
-        foreach ($this->phpFiles(app_path('Containers')) as $file) {
+        $layerFiles = $this->phpFiles(app_path('ServiceManagers'));
+        $this->assertNotEmpty($layerFiles);
+
+        foreach ($layerFiles as $file) {
             $contents = file_get_contents($file);
 
             $this->assertStringNotContainsString(
@@ -149,10 +169,10 @@ class LayerDependencyTest extends TestCase
                 $contents,
                 "{$file} 必須透過 TransactionManagerInterface 控制交易",
             );
-            $this->assertDoesNotMatchRegularExpression(
-                '/^use\s+App\\\\ServiceManagers\\\\/m',
+            $this->assertStringContainsString(
+                'TransactionManagerInterface',
                 $contents,
-                "{$file} 必須依賴 ServiceManager contract，而非具體實作",
+                "{$file} 必須保留寫入流程的交易邊界",
             );
         }
     }
